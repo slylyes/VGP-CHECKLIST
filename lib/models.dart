@@ -6,6 +6,8 @@ enum ColonneStatus {
   v,         // Visuel
   f,         // Fonctionnel
   neo,       // Non équipé d'origine
+  oui,       // OUI (pour Conditions Préalables)
+  non,       // NON (pour Conditions Préalables)
 }
 
 extension ColonneStatusExtension on ColonneStatus {
@@ -23,8 +25,18 @@ extension ColonneStatusExtension on ColonneStatus {
         return 'F';
       case ColonneStatus.neo:
         return 'NEO';
+      case ColonneStatus.oui:
+        return 'OUI';
+      case ColonneStatus.non:
+        return 'NON';
     }
   }
+}
+
+// Type d'affichage de la checklist
+enum ChecklistType {
+  standard, // B, D, V, F, NEO
+  ouiNon,   // OUI, NON
 }
 
 // Représente un seul point de vérification avec le nouveau système
@@ -33,12 +45,14 @@ class ChecklistItem {
   final bool isCategory; // Pour différencier les catégories des items
   ColonneStatus status;
   String numeroObservation; // N° d'observation
+  final ChecklistType type; // Type de réponse attendue
 
   ChecklistItem({
     required this.titre,
     this.isCategory = false,
     this.status = ColonneStatus.nonCoche,
     this.numeroObservation = '',
+    this.type = ChecklistType.standard,
   });
 }
 
@@ -151,12 +165,12 @@ class RapportVerification {
 // Fonction pour générer une checklist de base pour un nouveau rapport
 List<ChecklistItem> get defaultChecklist {
   return [
-    // --- CONDITIONS PRÉALABLES A LA VÉRIFICATION ---
-    ChecklistItem(titre: 'CONDITIONS PRÉALABLES A LA VÉRIFICATION', isCategory: true),
-    ChecklistItem(titre: 'État de propreté de l\'appareil satisfaisant'),
-    ChecklistItem(titre: 'Charge(s) d\'essai mise(s) à disposition (ou PESON)'),
-    ChecklistItem(titre: 'Mise à disposition du personnel pour la conduite de l\'appareil'),
-    ChecklistItem(titre: 'Zone sécurisée pour les essais'),
+    // --- CONDITIONS PRÉALABLES A LA VÉRIFICATION (OUI/NON) ---
+    ChecklistItem(titre: 'CONDITIONS PRÉALABLES A LA VÉRIFICATION', isCategory: true, type: ChecklistType.ouiNon),
+    ChecklistItem(titre: 'État de propreté de l\'appareil satisfaisant', type: ChecklistType.ouiNon),
+    ChecklistItem(titre: 'Charge(s) d\'essai mise(s) à disposition (ou PESON)', type: ChecklistType.ouiNon),
+    ChecklistItem(titre: 'Mise à disposition du personnel pour la conduite de l\'appareil', type: ChecklistType.ouiNon),
+    ChecklistItem(titre: 'Zone sécurisée pour les essais', type: ChecklistType.ouiNon),
     
     // --- DOCUMENTS REGLEMENTAIRE A PRESENTER ---
     ChecklistItem(titre: 'DOCUMENTS REGLEMENTAIRE A PRESENTER', isCategory: true),

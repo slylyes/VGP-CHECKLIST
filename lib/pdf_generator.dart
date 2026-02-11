@@ -22,67 +22,107 @@ Future<String> generateRapportInitial(RapportVerification rapport) async {
   
   final pdf = pw.Document();
 
-  final customStyle = pw.TextStyle(fontSize: 11, color: PdfColors.black, font: ttf);
+  final customStyle = pw.TextStyle(fontSize: 10, color: PdfColors.black, font: ttf); // Reduced font size slightly
   final boldStyle = customStyle.copyWith(fontWeight: pw.FontWeight.bold);
-  final titleStyle = boldStyle.copyWith(fontSize: 16, color: primaryColor);
+  final titleStyle = boldStyle.copyWith(fontSize: 14, color: primaryColor);
 
   final dateFormatter = DateFormat('dd/MM/yyyy');
   final dateActuelle = dateFormatter.format(rapport.dateVerification);
   final dateProchaine = dateFormatter.format(rapport.dateProchainControle);
 
+  // Séparation des items
+  final conditionsItems = rapport.checklist.where((i) => i.type == ChecklistType.ouiNon).toList();
+  final standardItems = rapport.checklist.where((i) => i.type == ChecklistType.standard).toList();
+
+  // Split standard items into two columns
+  final midPoint = (standardItems.length / 2).ceil();
+  final leftItems = standardItems.sublist(0, midPoint);
+  final rightItems = standardItems.sublist(midPoint);
+
   pdf.addPage(
     pw.Page(
       pageFormat: PdfPageFormat.a4,
-      margin: const pw.EdgeInsets.all(15),
+      margin: const pw.EdgeInsets.all(10), // Reduced margin
       build: (pw.Context context) {
         return pw.Column(
           crossAxisAlignment: pw.CrossAxisAlignment.start,
           children: [
-            // Logo
-            pw.Center(
-              child: pw.Image(logoImage, width: 80, height: 50, fit: pw.BoxFit.contain),
+            // Logo et Titre
+            pw.Row(
+              children: [
+                 pw.Image(logoImage, width: 60, height: 40, fit: pw.BoxFit.contain),
+                 pw.SizedBox(width: 20),
+                 pw.Expanded(
+                   child: pw.Text(
+                    'VÉRIFICATIONS RÈGLEMENTAIRES DES HAYON ÉLÉVATEURS\n(COMPTE RENDU INITIAL)',
+                    style: boldStyle.copyWith(fontSize: 12, color: primaryColor),
+                    textAlign: pw.TextAlign.center,
+                  ),
+                 ),
+              ]
             ),
-            pw.SizedBox(height: 8),
-            
-            // Titre
-            pw.Center(
-              child: pw.Text(
-                'VÉRIFICATIONS RÈGLEMENTAIRES\nDES HAYON ÉLÉVATEURS\n(COMPTE RENDU INITIAL)',
-                style: boldStyle.copyWith(fontSize: 12, color: primaryColor),
-                textAlign: pw.TextAlign.center,
+            pw.SizedBox(height: 5),
+
+            // Infos Client et Dates
+            pw.Container(
+              padding: const pw.EdgeInsets.all(5),
+              decoration: pw.BoxDecoration(border: pw.Border.all(color: PdfColors.grey400)),
+              child: pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Text('Client : ${rapport.nomClient}', style: boldStyle.copyWith(fontSize: 9)),
+                  pw.Text('Date : $dateActuelle', style: boldStyle.copyWith(fontSize: 9)),
+                  pw.Text('Prochaine : $dateProchaine', style: boldStyle.copyWith(fontSize: 9)),
+                ],
               ),
             ),
-            pw.SizedBox(height: 8),
+            pw.SizedBox(height: 5),
 
-            // Dates
+            // Tableau Conditions Préalables
+            if (conditionsItems.isNotEmpty)
+               _buildConditionsTable(conditionsItems, boldStyle, customStyle),
+
+            pw.SizedBox(height: 5),
+
+            // Section légende standard
             pw.Row(
               mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
               children: [
-                pw.Text('Date : $dateActuelle', style: boldStyle.copyWith(fontSize: 9)),
-                pw.Text('Prochaine vérification : $dateProchaine', style: boldStyle.copyWith(fontSize: 9)),
-              ],
+                 pw.Text(
+                  'EXAMEN DE L\'ÉTAT DE CONSERVATION',
+                  style: titleStyle.copyWith(fontSize: 10),
+                ),
+                pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.end,
+                  children: [
+                    pw.Text(
+                      'B = Bon | D = Défaut | V = Visuel | F = Fonctionnel | NEO = Non équipé',
+                      style: customStyle.copyWith(fontStyle: pw.FontStyle.italic, fontSize: 6),
+                    ),
+                    pw.Text(
+                      'N° = n° d\'observation à reporter',
+                      style: customStyle.copyWith(fontStyle: pw.FontStyle.italic, fontSize: 6),
+                    ),
+                  ]
+                )
+              ]
             ),
-            pw.SizedBox(height: 8),
+            pw.SizedBox(height: 2),
 
-            // Section légende
-            pw.Text(
-              'EXAMEN DE L\'ÉTAT DE CONSERVATION DE L\'APPAREIL',
-              style: titleStyle.copyWith(fontSize: 10),
-            ),
-            pw.SizedBox(height: 3),
-            pw.Text(
-              'B = Bon état | D = Défaut | V = Visuel | F = Fonctionnel | NEO = Non équipé d\'origine',
-              style: customStyle.copyWith(fontStyle: pw.FontStyle.italic, fontSize: 8),
-            ),
-            pw.Text(
-              'N° = n° d\'observation à reporter sur la couverture',
-              style: customStyle.copyWith(fontStyle: pw.FontStyle.italic, fontSize: 8),
-            ),
-            pw.SizedBox(height: 8),
-
-            // Tableau de la checklist
+            // Deux colonnes pour le reste
             pw.Expanded(
-              child: _buildChecklistTableInitial(rapport, boldStyle, customStyle),
+              child: pw.Row(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Expanded(
+                    child: _buildStandardChecklistTable(leftItems, boldStyle, customStyle),
+                  ),
+                  pw.SizedBox(width: 5),
+                  pw.Expanded(
+                    child: _buildStandardChecklistTable(rightItems, boldStyle, customStyle),
+                  ),
+                ],
+              ),
             ),
           ],
         );
@@ -117,9 +157,9 @@ Future<String> generateRapportFinal(RapportVerification rapport) async {
   
   final pdf = pw.Document();
 
-  final customStyle = pw.TextStyle(fontSize: 10, color: PdfColors.black, font: ttf);
+  final customStyle = pw.TextStyle(fontSize: 9, color: PdfColors.black, font: ttf);
   final boldStyle = customStyle.copyWith(fontWeight: pw.FontWeight.bold);
-  final sectionStyle = boldStyle.copyWith(fontSize: 12);
+  final sectionStyle = boldStyle.copyWith(fontSize: 10, color: primaryColor);
 
   final dateFormatter = DateFormat('dd/MM/yyyy');
   final dateActuelle = dateFormatter.format(rapport.dateVerification);
@@ -128,16 +168,15 @@ Future<String> generateRapportFinal(RapportVerification rapport) async {
   pdf.addPage(
     pw.Page(
       pageFormat: PdfPageFormat.a4,
-      margin: const pw.EdgeInsets.all(12),
+      margin: const pw.EdgeInsets.all(10),
       build: (pw.Context context) {
         return pw.Column(
           crossAxisAlignment: pw.CrossAxisAlignment.start,
           children: [
             // Logo
             pw.Center(
-              child: pw.Image(logoImage, width: 70, height: 45, fit: pw.BoxFit.contain),
+              child: pw.Image(logoImage, width: 60, height: 40, fit: pw.BoxFit.contain),
             ),
-            pw.SizedBox(height: 5),
             
             // Titre
             pw.Center(
@@ -149,39 +188,52 @@ Future<String> generateRapportFinal(RapportVerification rapport) async {
             ),
             pw.SizedBox(height: 5),
 
-            // Section Contrôleur et Client en 2 colonnes
+            // Section Contrôleur et Client
             pw.Row(
               crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
+                // Colonne Contrôleur
                 pw.Expanded(
+                  flex: 4,
                   child: pw.Column(
                     crossAxisAlignment: pw.CrossAxisAlignment.start,
                     children: [
-                      pw.Text('LE CONTROLEUR', style: sectionStyle.copyWith(fontSize: 9)),
+                      pw.Text('LE CONTROLEUR', style: sectionStyle),
                       pw.Divider(color: primaryColor, height: 2),
-                      _buildInfoRow('Société :', 'ACCESS VGP', boldStyle.copyWith(fontSize: 7), customStyle.copyWith(fontSize: 7)),
-                      _buildInfoRow('Nom :', 'RENAI KOUCEILA', boldStyle.copyWith(fontSize: 7), customStyle.copyWith(fontSize: 7)),
-                      _buildInfoRow('Mail :', 'vgpaccess@gmail.com', boldStyle.copyWith(fontSize: 7), customStyle.copyWith(fontSize: 7)),
-                      _buildInfoRow('Tél :', '06.19.60.31.72', boldStyle.copyWith(fontSize: 7), customStyle.copyWith(fontSize: 7)),
-                      _buildInfoRow('Date :', dateActuelle, boldStyle.copyWith(fontSize: 7), customStyle.copyWith(fontSize: 7)),
+                      _buildInfoRow('Société :', 'ACCESS VGP', boldStyle, customStyle),
+                      _buildInfoRow('Nom :', 'RENAI KOUCEILA', boldStyle, customStyle),
+                      _buildInfoRow('Mail :', 'vgpaccess@gmail.com', boldStyle, customStyle),
+                      _buildInfoRow('Tél :', '06.19.60.31.72', boldStyle, customStyle),
+                      _buildInfoRow('Date :', dateActuelle, boldStyle, customStyle),
                     ],
                   ),
                 ),
                 pw.SizedBox(width: 10),
+                // Colonne Client & Responsable
                 pw.Expanded(
+                  flex: 5,
                   child: pw.Column(
                     crossAxisAlignment: pw.CrossAxisAlignment.start,
                     children: [
-                      pw.Text('CLIENT', style: sectionStyle.copyWith(fontSize: 9)),
+                      pw.Text('CLIENT', style: sectionStyle),
                       pw.Divider(color: primaryColor, height: 2),
-                      _buildInfoRow('Client :', rapport.nomClient, boldStyle.copyWith(fontSize: 7), customStyle.copyWith(fontSize: 7)),
-                      _buildInfoRow('N° rapport :', '${_numeroRapport++}', boldStyle.copyWith(fontSize: 7), customStyle.copyWith(fontSize: 7)),
-                      _buildInfoRow('Prochain :', dateProchaine, boldStyle.copyWith(fontSize: 7), customStyle.copyWith(fontSize: 7)),
+                      _buildInfoRow('Client :', rapport.nomClient, boldStyle, customStyle),
+                      _buildInfoRow('N° rapport :', '${_numeroRapport++}', boldStyle, customStyle),
+                      _buildInfoRow('Prochain :', dateProchaine, boldStyle, customStyle),
+
                       pw.SizedBox(height: 5),
-                      pw.Text('RESPONSABLE DE L\'APPAREIL', style: sectionStyle.copyWith(fontSize: 9)),
+
+                      pw.Text('RESPONSABLE DE L\'APPAREIL', style: sectionStyle),
                       pw.Divider(color: primaryColor, height: 2),
-                      _buildInfoRow('Nom :', rapport.nomResponsable ?? '', boldStyle.copyWith(fontSize: 7), customStyle.copyWith(fontSize: 7)),
-                      _buildInfoRow('Société :', rapport.societeResponsable ?? '', boldStyle.copyWith(fontSize: 7), customStyle.copyWith(fontSize: 7)),
+                      _buildInfoRow('Nom :', rapport.nomResponsable ?? '', boldStyle, customStyle),
+                      _buildInfoRow('Société :', rapport.societeResponsable ?? '', boldStyle, customStyle),
+                      pw.SizedBox(height: 4),
+                      pw.Container(
+                        height: 30,
+                        width: double.infinity,
+                        decoration: pw.BoxDecoration(border: pw.Border.all(color: PdfColors.grey400)),
+                        child: pw.Center(child: pw.Text("Signature", style: customStyle.copyWith(color: PdfColors.grey600, fontSize: 8))),
+                      ),
                     ],
                   ),
                 ),
@@ -190,89 +242,120 @@ Future<String> generateRapportFinal(RapportVerification rapport) async {
             pw.SizedBox(height: 5),
 
             // Types de vérification
-            pw.Text('TYPE DE VÉRIFICATION', style: sectionStyle.copyWith(fontSize: 8)),
+            pw.Text('TYPE DE VÉRIFICATION', style: sectionStyle),
             pw.Divider(color: primaryColor, height: 2),
             if (rapport.typesVerification.contains(TypeVerification.miseEnService))
-              pw.Text('☑ Mise en service (R4323-22)', style: customStyle.copyWith(fontSize: 7)),
+              pw.Text('☑ Vérification de mise en service (Article R4323-22)', style: customStyle.copyWith(fontSize: 8)),
             if (rapport.typesVerification.contains(TypeVerification.generalePeriodique))
-              pw.Text('☑ VGP (R4323-23, 24, 25, 26, 27)', style: customStyle.copyWith(fontSize: 7)),
+              pw.Text('☑ Vérification générale périodique (VGP)(Article R4323-23, 24, 25, 26, 27)', style: customStyle.copyWith(fontSize: 8)),
             if (rapport.typesVerification.contains(TypeVerification.remiseEnService))
-              pw.Text('☑ Remise en service (R4323-28)', style: customStyle.copyWith(fontSize: 7)),
-            pw.SizedBox(height: 4),
+              pw.Text('☑ Vérification de remise en service (Article R4323-28)', style: customStyle.copyWith(fontSize: 8)),
 
-            // Documents obligatoires et Identification en 2 colonnes
+            pw.SizedBox(height: 5),
+
+            // Texte légal
+            pw.Container(
+              padding: const pw.EdgeInsets.all(4),
+              decoration: pw.BoxDecoration(border: pw.Border.all(color: primaryColor, width: 0.5)),
+              child: pw.Text(
+                "Selon les articles R.4323-22 à R.4323-28 du code du travail et arrêté du 1er mars 2004 relatif aux vérifications des appareils de levage.\nPossibilité d'imprimer l'arrêté sur www.vgp-online.fr\nRecommandations d'utilisation qui définissent les conditions d'obtention du certificat d'aptitude à la conduite en sécurité",
+                style: customStyle.copyWith(fontSize: 6),
+                textAlign: pw.TextAlign.center,
+              ),
+            ),
+            pw.SizedBox(height: 5),
+
+            // Documents et Identification
             pw.Row(
               crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
+                // Documents
                 pw.Expanded(
                   child: pw.Column(
                     crossAxisAlignment: pw.CrossAxisAlignment.start,
                     children: [
-                      pw.Text('DOCUMENTS', style: sectionStyle.copyWith(fontSize: 8)),
+                      pw.Text('DOCUMENTS', style: sectionStyle),
                       pw.Divider(color: primaryColor, height: 2),
                       ...rapport.documentsObligatoires.map((doc) {
-                        return pw.Text(
-                          '${doc.fourni ? "☑" : "☐"} ${doc.titre}',
-                          style: customStyle.copyWith(fontSize: 6),
+                        return pw.Padding(
+                          padding: const pw.EdgeInsets.only(bottom: 2),
+                          child: pw.Text(
+                            '${doc.fourni ? "☑" : "☐"} ${doc.titre}',
+                            style: customStyle.copyWith(fontSize: 7),
+                          ),
                         );
                       }).toList(),
-                      pw.SizedBox(height: 3),
-                      pw.Text(
-                        'Articles R.4323-22 à R.4323-28',
-                        style: customStyle.copyWith(fontStyle: pw.FontStyle.italic, fontSize: 6),
-                      ),
                     ],
                   ),
                 ),
                 pw.SizedBox(width: 10),
+                // Identification
                 pw.Expanded(
                   child: pw.Column(
                     crossAxisAlignment: pw.CrossAxisAlignment.start,
                     children: [
-                      pw.Text('IDENTIFICATION', style: sectionStyle.copyWith(fontSize: 8)),
+                      pw.Text('IDENTIFICATION', style: sectionStyle),
                       pw.Divider(color: primaryColor, height: 2),
-                      _buildInfoRow('Marque :', rapport.marqueModele, boldStyle.copyWith(fontSize: 6), customStyle.copyWith(fontSize: 6)),
-                      _buildInfoRow('Modèle :', rapport.typeVehicule ?? '', boldStyle.copyWith(fontSize: 6), customStyle.copyWith(fontSize: 6)),
-                      _buildInfoRow('N° Série :', rapport.numeroSerie ?? '', boldStyle.copyWith(fontSize: 6), customStyle.copyWith(fontSize: 6)),
-                      _buildInfoRow('Immat :', rapport.immatriculation, boldStyle.copyWith(fontSize: 6), customStyle.copyWith(fontSize: 6)),
-                      _buildInfoRow('Charge :', rapport.chargeMaxiLevage ?? '', boldStyle.copyWith(fontSize: 6), customStyle.copyWith(fontSize: 6)),
-                      _buildInfoRow('Année :', rapport.anneeFabrication ?? '', boldStyle.copyWith(fontSize: 6), customStyle.copyWith(fontSize: 6)),
-                      _buildInfoRow('Km :', '${rapport.kilometrage} km', boldStyle.copyWith(fontSize: 6), customStyle.copyWith(fontSize: 6)),
+                      _buildInfoRow('Marque :', rapport.marqueModele, boldStyle, customStyle),
+                      _buildInfoRow('Modèle :', rapport.typeVehicule ?? '', boldStyle, customStyle),
+                      _buildInfoRow('Type :', rapport.typeVehicule ?? '', boldStyle, customStyle),
+                      _buildInfoRow('Catégorie :', rapport.categorieVehicule ?? '', boldStyle, customStyle),
+                      _buildInfoRow('N° Série :', rapport.numeroSerie ?? '', boldStyle, customStyle),
+                      _buildInfoRow('Immat :', rapport.immatriculation, boldStyle, customStyle),
+                      _buildInfoRow('Accessoires :', rapport.accessoires ?? '', boldStyle, customStyle),
+                      _buildInfoRow('Charge :', rapport.chargeMaxiLevage ?? '', boldStyle, customStyle),
+                      _buildInfoRow('Année :', rapport.anneeFabrication ?? '', boldStyle, customStyle),
+                      _buildInfoRow('Marquage CE :', rapport.marquageCE ?? '', boldStyle, customStyle),
+                      _buildInfoRow('Compteur :', rapport.compteurHorametre ?? '', boldStyle, customStyle),
+                      _buildInfoRow('N° Parc :', rapport.numeroParc ?? '', boldStyle, customStyle),
+                      _buildInfoRow('Km :', '${rapport.kilometrage} km', boldStyle, customStyle),
                     ],
                   ),
                 ),
               ],
             ),
-            pw.SizedBox(height: 4),
+            pw.SizedBox(height: 5),
 
             // Remarques
-            pw.Text('REMARQUES', style: sectionStyle.copyWith(fontSize: 8)),
+            pw.Text('REMARQUES', style: sectionStyle),
             pw.Divider(color: primaryColor, height: 2),
             pw.Text(
               'Défauts susceptibles d\'engendrer un danger :',
-              style: customStyle.copyWith(fontSize: 7),
+              style: customStyle.copyWith(fontSize: 8, fontWeight: pw.FontWeight.bold),
             ),
             ...List.generate(4, (index) {
               final defaut = index < rapport.defauts.length ? rapport.defauts[index] : '';
-              return pw.Text('N° ${index + 1}: $defaut', style: customStyle.copyWith(fontSize: 6));
+              return pw.Container(
+                decoration: const pw.BoxDecoration(
+                  border: pw.Border(bottom: pw.BorderSide(color: PdfColors.grey300)),
+                ),
+                child: pw.Text('N° ${index + 1}: $defaut', style: customStyle.copyWith(fontSize: 7)),
+              );
             }),
-            pw.SizedBox(height: 4),
-
-            // Rappel
-            pw.Text(
-              'Rappel : le chef d\'établissement de l\'appareil doit consigner le résultat des vérifications règlementaires, sur le registre de sécurité prévu à l\'article L.4711-5 du code du travail et tenir à jour le carnet de maintenance prévu aux articles R.4323-19.',
-              style: customStyle.copyWith(fontStyle: pw.FontStyle.italic, fontSize: 6),
-            ),
-            pw.SizedBox(height: 4),
+            pw.SizedBox(height: 5),
 
             // Conclusions
-            pw.Text(
-              '${rapport.appareilUtilisable ? "☑" : "☐"} L\'appareil peut être utilisé',
-              style: boldStyle.copyWith(fontSize: 7),
-            ),
-            pw.Text(
-              '${rapport.contreVisiteObligatoire ? "☑" : "☐"} Contre-visite obligatoire',
-              style: boldStyle.copyWith(fontSize: 7),
+            pw.Text('CONCLUSIONS', style: sectionStyle),
+            pw.Divider(color: primaryColor, height: 2),
+             pw.Row(
+               children: [
+                 pw.Text(
+                  '${rapport.appareilUtilisable ? "☑" : "☐"} L\'appareil peut être utilisé',
+                  style: boldStyle.copyWith(fontSize: 9),
+                ),
+                pw.SizedBox(width: 20),
+                pw.Text(
+                  '${rapport.contreVisiteObligatoire ? "☑" : "☐"} Contre-visite obligatoire',
+                  style: boldStyle.copyWith(fontSize: 9),
+                ),
+               ]
+             ),
+
+             pw.SizedBox(height: 5),
+             pw.Text(
+              'Rappel : le chef d\'établissement de l\'appareil doit consigner le résultat des vérifications règlementaires, sur le registre de sécurité prévu à l\'article L.4711-5 du code du travail et tenir à jour le carnet de maintenance prévu aux articles R.4323-19.',
+              style: customStyle.copyWith(fontStyle: pw.FontStyle.italic, fontSize: 6),
+              textAlign: pw.TextAlign.justify
             ),
           ],
         );
@@ -297,96 +380,116 @@ Future<String> generateRapportFinal(RapportVerification rapport) async {
 }
 
 // --- HELPERS ---
+
 pw.Widget _buildInfoRow(String label, String value, pw.TextStyle boldStyle, pw.TextStyle style) {
-  return pw.Padding(
-    padding: const pw.EdgeInsets.only(bottom: 1),
-    child: pw.Row(
-      children: [
-        pw.Container(width: 60, child: pw.Text(label, style: boldStyle)),
-        pw.Expanded(child: pw.Text(value, style: style)),
-      ],
-    ),
+  return pw.Row(
+    children: [
+      pw.Container(width: 55, child: pw.Text(label, style: boldStyle.copyWith(fontSize: 7))),
+      pw.Expanded(child: pw.Text(value, style: style.copyWith(fontSize: 7), maxLines: 1, overflow: pw.TextOverflow.clip)),
+    ],
   );
 }
 
-pw.Widget _buildChecklistTableInitial(RapportVerification rapport, pw.TextStyle boldStyle, pw.TextStyle style) {
-  final List<pw.TableRow> rows = [
-    pw.TableRow(
-      decoration: const pw.BoxDecoration(color: primaryColor),
-      children: [
-        _buildTableCell('Item', boldStyle.copyWith(color: PdfColors.white)),
-        _buildTableCell('B', boldStyle.copyWith(color: PdfColors.white), alignment: pw.Alignment.center),
-        _buildTableCell('D', boldStyle.copyWith(color: PdfColors.white), alignment: pw.Alignment.center),
-        _buildTableCell('V', boldStyle.copyWith(color: PdfColors.white), alignment: pw.Alignment.center),
-        _buildTableCell('F', boldStyle.copyWith(color: PdfColors.white), alignment: pw.Alignment.center),
-        _buildTableCell('NEO', boldStyle.copyWith(color: PdfColors.white), alignment: pw.Alignment.center),
-        _buildTableCell('N°', boldStyle.copyWith(color: PdfColors.white), alignment: pw.Alignment.center),
-      ],
-    ),
-  ];
-
-  for (var item in rapport.checklist) {
-    if (item.isCategory) {
-      // Ligne de catégorie - créer 7 cellules mais fusionner visuellement
-      rows.add(
-        pw.TableRow(
-          decoration: pw.BoxDecoration(color: PdfColors.grey300),
-          children: [
-            pw.Container(
-              padding: const pw.EdgeInsets.all(5),
-              child: pw.Text(item.titre, style: boldStyle),
-            ),
-            pw.Container(), // Cellule vide
-            pw.Container(), // Cellule vide
-            pw.Container(), // Cellule vide
-            pw.Container(), // Cellule vide
-            pw.Container(), // Cellule vide
-            pw.Container(), // Cellule vide
-          ],
-        ),
-      );
-    } else {
-      // Ligne d'item
-      rows.add(
-        pw.TableRow(
+// Tableau spécifique pour les Conditions Préalables (OUI/NON)
+pw.Widget _buildConditionsTable(List<ChecklistItem> items, pw.TextStyle boldStyle, pw.TextStyle style) {
+  return pw.Table(
+    border: pw.TableBorder.all(color: PdfColors.grey400, width: 0.5),
+    columnWidths: const {
+      0: pw.FlexColumnWidth(5),
+      1: pw.FlexColumnWidth(1),
+      2: pw.FlexColumnWidth(1),
+    },
+    children: [
+      pw.TableRow(
+        decoration: const pw.BoxDecoration(color: primaryColor),
+        children: [
+          _buildTableCell('CONDITIONS PRÉALABLES', boldStyle.copyWith(color: PdfColors.white)),
+          _buildTableCell('OUI', boldStyle.copyWith(color: PdfColors.white), alignment: pw.Alignment.center),
+          _buildTableCell('NON', boldStyle.copyWith(color: PdfColors.white), alignment: pw.Alignment.center),
+        ],
+      ),
+      ...items.where((i) => !i.isCategory).map((item) {
+        return pw.TableRow(
           decoration: const pw.BoxDecoration(
             border: pw.Border(bottom: pw.BorderSide(color: PdfColors.grey200)),
           ),
           children: [
             _buildTableCell(item.titre, style),
-            _buildTableCell(item.status == ColonneStatus.b ? 'X' : '', style, alignment: pw.Alignment.center),
-            _buildTableCell(item.status == ColonneStatus.d ? 'X' : '', style, alignment: pw.Alignment.center),
-            _buildTableCell(item.status == ColonneStatus.v ? 'X' : '', style, alignment: pw.Alignment.center),
-            _buildTableCell(item.status == ColonneStatus.f ? 'X' : '', style, alignment: pw.Alignment.center),
-            _buildTableCell(item.status == ColonneStatus.neo ? 'X' : '', style, alignment: pw.Alignment.center),
-            _buildTableCell(item.numeroObservation, style, alignment: pw.Alignment.center),
+            _buildTableCell(item.status == ColonneStatus.oui ? 'X' : '', style, alignment: pw.Alignment.center),
+            _buildTableCell(item.status == ColonneStatus.non ? 'X' : '', style, alignment: pw.Alignment.center),
           ],
-        ),
-      );
-    }
-  }
+        );
+      }).toList(),
+    ],
+  );
+}
 
+// Tableau standard (B, D, V, F, NEO, N°)
+pw.Widget _buildStandardChecklistTable(List<ChecklistItem> items, pw.TextStyle boldStyle, pw.TextStyle style) {
   return pw.Table(
     border: pw.TableBorder.all(color: PdfColors.grey400, width: 0.5),
     columnWidths: const {
-      0: pw.FlexColumnWidth(4),
-      1: pw.FlexColumnWidth(0.8),
-      2: pw.FlexColumnWidth(0.8),
-      3: pw.FlexColumnWidth(0.8),
-      4: pw.FlexColumnWidth(0.8),
-      5: pw.FlexColumnWidth(1),
-      6: pw.FlexColumnWidth(1),
+      0: pw.FlexColumnWidth(4), // Item
+      1: pw.FlexColumnWidth(0.7), // B
+      2: pw.FlexColumnWidth(0.7), // D
+      3: pw.FlexColumnWidth(0.7), // V
+      4: pw.FlexColumnWidth(0.7), // F
+      5: pw.FlexColumnWidth(0.8), // NEO
+      6: pw.FlexColumnWidth(0.8), // N°
     },
-    children: rows,
+    children: [
+      // Header row
+      pw.TableRow(
+        decoration: const pw.BoxDecoration(color: primaryColor),
+        children: [
+          _buildTableCell('Item', boldStyle.copyWith(color: PdfColors.white, fontSize: 6)),
+          _buildTableCell('B', boldStyle.copyWith(color: PdfColors.white, fontSize: 6), alignment: pw.Alignment.center),
+          _buildTableCell('D', boldStyle.copyWith(color: PdfColors.white, fontSize: 6), alignment: pw.Alignment.center),
+          _buildTableCell('V', boldStyle.copyWith(color: PdfColors.white, fontSize: 6), alignment: pw.Alignment.center),
+          _buildTableCell('F', boldStyle.copyWith(color: PdfColors.white, fontSize: 6), alignment: pw.Alignment.center),
+          _buildTableCell('NEO', boldStyle.copyWith(color: PdfColors.white, fontSize: 6), alignment: pw.Alignment.center),
+          _buildTableCell('N°', boldStyle.copyWith(color: PdfColors.white, fontSize: 6), alignment: pw.Alignment.center),
+        ],
+      ),
+      ...items.map((item) {
+        if (item.isCategory) {
+          return pw.TableRow(
+            decoration: pw.BoxDecoration(color: PdfColors.grey300),
+            children: [
+              pw.Container(
+                padding: const pw.EdgeInsets.all(2),
+                child: pw.Text(item.titre, style: boldStyle.copyWith(fontSize: 7)),
+              ),
+              pw.Container(), pw.Container(), pw.Container(), pw.Container(), pw.Container(), pw.Container(),
+            ],
+          );
+        } else {
+          return pw.TableRow(
+            decoration: const pw.BoxDecoration(
+              border: pw.Border(bottom: pw.BorderSide(color: PdfColors.grey200)),
+            ),
+            children: [
+              _buildTableCell(item.titre, style),
+              _buildTableCell(item.status == ColonneStatus.b ? 'X' : '', style, alignment: pw.Alignment.center),
+              _buildTableCell(item.status == ColonneStatus.d ? 'X' : '', style, alignment: pw.Alignment.center),
+              _buildTableCell(item.status == ColonneStatus.v ? 'X' : '', style, alignment: pw.Alignment.center),
+              _buildTableCell(item.status == ColonneStatus.f ? 'X' : '', style, alignment: pw.Alignment.center),
+              _buildTableCell(item.status == ColonneStatus.neo ? 'X' : '', style, alignment: pw.Alignment.center),
+              _buildTableCell(item.numeroObservation, style, alignment: pw.Alignment.center),
+            ],
+          );
+        }
+      }).toList(),
+    ],
   );
 }
 
 pw.Widget _buildTableCell(String text, pw.TextStyle style, {pw.Alignment alignment = pw.Alignment.centerLeft}) {
   return pw.Padding(
-    padding: const pw.EdgeInsets.all(2),
+    padding: const pw.EdgeInsets.all(1.5), // Reduced padding
     child: pw.Align(
       alignment: alignment,
-      child: pw.Text(text, style: style.copyWith(fontSize: 7)),
+      child: pw.Text(text, style: style.copyWith(fontSize: 6.5)), // Small font
     ),
   );
 }

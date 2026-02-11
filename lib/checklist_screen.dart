@@ -60,6 +60,10 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
                 ),
                 const SizedBox(height: 8),
                 const Text(
+                  'Pour Conditions Préalables : OUI / NON',
+                  style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic),
+                ),
+                const Text(
                   'B = Bon état | D = Défaut | V = Visuel | F = Fonctionnel | NEO = Non équipé d\'origine',
                   style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic),
                 ),
@@ -118,18 +122,29 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
             ),
             const SizedBox(height: 12),
             
-            // Rangée de boutons pour B, D, V, F, NEO
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                _buildStatusChip('B', ColonneStatus.b, item),
-                _buildStatusChip('D', ColonneStatus.d, item),
-                _buildStatusChip('V', ColonneStatus.v, item),
-                _buildStatusChip('F', ColonneStatus.f, item),
-                _buildStatusChip('NEO', ColonneStatus.neo, item),
-              ],
-            ),
+            if (item.type == ChecklistType.ouiNon)
+              // Rangée de boutons pour OUI / NON
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  _buildStatusChip('OUI', ColonneStatus.oui, item),
+                  _buildStatusChip('NON', ColonneStatus.non, item),
+                ],
+              )
+            else
+              // Rangée de boutons pour B, D, V, F, NEO
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  _buildStatusChip('B', ColonneStatus.b, item),
+                  _buildStatusChip('D', ColonneStatus.d, item),
+                  _buildStatusChip('V', ColonneStatus.v, item),
+                  _buildStatusChip('F', ColonneStatus.f, item),
+                  _buildStatusChip('NEO', ColonneStatus.neo, item),
+                ],
+              ),
             
             const SizedBox(height: 8),
             
