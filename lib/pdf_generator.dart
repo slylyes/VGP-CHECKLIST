@@ -22,7 +22,8 @@ Future<String> generateRapportInitial(RapportVerification rapport) async {
   
   final pdf = pw.Document();
 
-  final customStyle = pw.TextStyle(fontSize: 6.5, color: PdfColors.black, font: ttf); // Reduced font size significantly
+  // Adjusted font size for better readability while maintaining single page
+  final customStyle = pw.TextStyle(fontSize: 7.0, color: PdfColors.black, font: ttf);
   final boldStyle = customStyle.copyWith(fontWeight: pw.FontWeight.bold);
   final titleStyle = boldStyle.copyWith(fontSize: 10, color: primaryColor);
 
@@ -34,16 +35,50 @@ Future<String> generateRapportInitial(RapportVerification rapport) async {
   final conditionsItems = rapport.checklist.where((i) => i.type == ChecklistType.ouiNon).toList();
   final standardItems = rapport.checklist.where((i) => i.type == ChecklistType.standard).toList();
 
-  // Split standard items into THREE columns for maximum compactness
-  final third = (standardItems.length / 3).ceil();
-  final col1 = standardItems.sublist(0, third);
-  final col2 = standardItems.sublist(third, 2 * third);
-  final col3 = standardItems.sublist(2 * third);
+  // Group standard items by category for layout
+  final List<List<ChecklistItem>> categories = [];
+  List<ChecklistItem> currentCategory = [];
+
+  for (var item in standardItems) {
+    if (item.isCategory) {
+      if (currentCategory.isNotEmpty) {
+        categories.add(List.from(currentCategory));
+      }
+      currentCategory = [item];
+    } else {
+      currentCategory.add(item);
+    }
+  }
+  if (currentCategory.isNotEmpty) {
+    categories.add(List.from(currentCategory));
+  }
+
+  // Split categories into two columns to balance height
+  // Strategy: Place roughly half the items in each column, but keep categories intact.
+  // Based on defaultChecklist structure:
+  // Col 1: Documents (5), Charpentes/Meca 1 (9), Poste (9), Securite (6) -> ~29 items
+  // Col 2: Charpentes/Meca 2 (5), Prescriptions (6), Mouvements (7), Examens (4) -> ~22 items
+  // This is a reasonable split. We can try to automate or hardcode based on index.
+
+  List<List<ChecklistItem>> col1Categories = [];
+  List<List<ChecklistItem>> col2Categories = [];
+
+  // Simple distribution: First 4 categories in Col 1, rest in Col 2
+  // Assuming standard order matches defaultChecklist
+  if (categories.length >= 8) {
+     col1Categories = categories.sublist(0, 4);
+     col2Categories = categories.sublist(4);
+  } else {
+     // Fallback if structure is different: split evenly by count
+     int mid = (categories.length / 2).ceil();
+     col1Categories = categories.sublist(0, mid);
+     col2Categories = categories.sublist(mid);
+  }
 
   pdf.addPage(
     pw.Page(
       pageFormat: PdfPageFormat.a4,
-      margin: const pw.EdgeInsets.all(5), // Minimal margin
+      margin: const pw.EdgeInsets.all(10), // Standard margin
       build: (pw.Context context) {
         return pw.Column(
           crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -51,39 +86,43 @@ Future<String> generateRapportInitial(RapportVerification rapport) async {
             // Logo et Titre
             pw.Row(
               children: [
-                 pw.Image(logoImage, width: 40, height: 25, fit: pw.BoxFit.contain), // Smaller logo
+                 pw.Container(
+                   width: 60,
+                   height: 40,
+                   child: pw.Image(logoImage, fit: pw.BoxFit.contain),
+                 ),
                  pw.SizedBox(width: 10),
                  pw.Expanded(
                    child: pw.Text(
                     'VÉRIFICATIONS RÈGLEMENTAIRES DES HAYON ÉLÉVATEURS\n(COMPTE RENDU INITIAL)',
-                    style: boldStyle.copyWith(fontSize: 9, color: primaryColor), // Smaller title
+                    style: boldStyle.copyWith(fontSize: 12, color: primaryColor),
                     textAlign: pw.TextAlign.center,
                   ),
                  ),
               ]
             ),
-            pw.SizedBox(height: 2),
+            pw.SizedBox(height: 5),
 
             // Infos Client et Dates
             pw.Container(
-              padding: const pw.EdgeInsets.all(2),
+              padding: const pw.EdgeInsets.symmetric(vertical: 4, horizontal: 8),
               decoration: pw.BoxDecoration(border: pw.Border.all(color: PdfColors.grey400)),
               child: pw.Row(
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
-                  pw.Text('Client : ${rapport.nomClient}', style: boldStyle.copyWith(fontSize: 7)),
-                  pw.Text('Date : $dateActuelle', style: boldStyle.copyWith(fontSize: 7)),
-                  pw.Text('Prochaine : $dateProchaine', style: boldStyle.copyWith(fontSize: 7)),
+                  pw.Text('Client : ${rapport.nomClient}', style: boldStyle.copyWith(fontSize: 9)),
+                  pw.Text('Date : $dateActuelle', style: boldStyle.copyWith(fontSize: 9)),
+                  pw.Text('Prochaine : $dateProchaine', style: boldStyle.copyWith(fontSize: 9)),
                 ],
               ),
             ),
-            pw.SizedBox(height: 2),
+            pw.SizedBox(height: 5),
 
             // Tableau Conditions Préalables
             if (conditionsItems.isNotEmpty)
                _buildConditionsTable(conditionsItems, boldStyle, customStyle),
 
-            pw.SizedBox(height: 2),
+            pw.SizedBox(height: 5),
 
             // Section légende standard
             pw.Row(
@@ -91,40 +130,48 @@ Future<String> generateRapportInitial(RapportVerification rapport) async {
               children: [
                  pw.Text(
                   'EXAMEN DE L\'ÉTAT DE CONSERVATION',
-                  style: titleStyle.copyWith(fontSize: 8),
+                  style: titleStyle.copyWith(fontSize: 10),
                 ),
                 pw.Column(
                   crossAxisAlignment: pw.CrossAxisAlignment.end,
                   children: [
                     pw.Text(
                       'B = Bon | D = Défaut | V = Visuel | F = Fonctionnel | NEO = Non équipé',
-                      style: customStyle.copyWith(fontStyle: pw.FontStyle.italic, fontSize: 5),
+                      style: customStyle.copyWith(fontStyle: pw.FontStyle.italic, fontSize: 6),
                     ),
                     pw.Text(
                       'N° = n° d\'observation à reporter',
-                      style: customStyle.copyWith(fontStyle: pw.FontStyle.italic, fontSize: 5),
+                      style: customStyle.copyWith(fontStyle: pw.FontStyle.italic, fontSize: 6),
                     ),
                   ]
                 )
               ]
             ),
-            pw.SizedBox(height: 2),
+            pw.SizedBox(height: 5),
 
-            // Trois colonnes pour le reste
+            // Deux colonnes pour le reste
             pw.Expanded(
               child: pw.Row(
                 crossAxisAlignment: pw.CrossAxisAlignment.start,
                 children: [
+                  // Colonne 1
                   pw.Expanded(
-                    child: _buildStandardChecklistTable(col1, boldStyle, customStyle),
+                    child: pw.Column(
+                      children: [
+                        _buildTableHeader(boldStyle),
+                        ...col1Categories.map((cat) => _buildCategoryTable(cat, boldStyle, customStyle)),
+                      ],
+                    ),
                   ),
-                  pw.SizedBox(width: 2),
+                  pw.SizedBox(width: 5),
+                  // Colonne 2
                   pw.Expanded(
-                    child: _buildStandardChecklistTable(col2, boldStyle, customStyle),
-                  ),
-                  pw.SizedBox(width: 2),
-                  pw.Expanded(
-                    child: _buildStandardChecklistTable(col3, boldStyle, customStyle),
+                    child: pw.Column(
+                      children: [
+                        _buildTableHeader(boldStyle),
+                        ...col2Categories.map((cat) => _buildCategoryTable(cat, boldStyle, customStyle)),
+                      ],
+                    ),
                   ),
                 ],
               ),
@@ -335,7 +382,7 @@ Future<String> generateRapportFinal(RapportVerification rapport) async {
                       pw.Text('IDENTIFICATION', style: sectionStyle),
                       pw.Divider(color: primaryColor, height: 2),
                       _buildInfoRow('Marque :', rapport.marqueModele, boldStyle, customStyle),
-                      _buildInfoRow('Modèle :', rapport.typeVehicule ?? '', boldStyle, customStyle),
+                      _buildInfoRow('Modèle :', rapport.typeVehicule ?? '', boldStyle, customStyle), // Might need adjustment based on user needs, but Type is below
                       _buildInfoRow('Type :', rapport.typeVehicule ?? '', boldStyle, customStyle),
                       _buildInfoRow('Catégorie :', rapport.categorieVehicule ?? '', boldStyle, customStyle),
                       _buildInfoRow('N° Série :', rapport.numeroSerie ?? '', boldStyle, customStyle),
@@ -468,8 +515,14 @@ pw.Widget _buildConditionsTable(List<ChecklistItem> items, pw.TextStyle boldStyl
   );
 }
 
-// Tableau standard (B, D, V, F, NEO, N°)
-pw.Widget _buildStandardChecklistTable(List<ChecklistItem> items, pw.TextStyle boldStyle, pw.TextStyle style) {
+// Construit un tableau pour une catégorie entière
+pw.Widget _buildCategoryTable(List<ChecklistItem> items, pw.TextStyle boldStyle, pw.TextStyle style) {
+  if (items.isEmpty) return pw.Container();
+
+  // Le premier item devrait être le header de catégorie
+  final header = items.first;
+  final contentItems = items.skip(1).toList();
+
   return pw.Table(
     border: pw.TableBorder.all(color: PdfColors.grey400, width: 0.5),
     columnWidths: const {
@@ -482,47 +535,43 @@ pw.Widget _buildStandardChecklistTable(List<ChecklistItem> items, pw.TextStyle b
       6: pw.FlexColumnWidth(0.8), // N°
     },
     children: [
-      // Header row
+      // Header de la catégorie
       pw.TableRow(
         decoration: const pw.BoxDecoration(color: primaryColor),
         children: [
-          _buildTableCell('Item', boldStyle.copyWith(color: PdfColors.white, fontSize: 5)),
-          _buildTableCell('B', boldStyle.copyWith(color: PdfColors.white, fontSize: 5), alignment: pw.Alignment.center),
-          _buildTableCell('D', boldStyle.copyWith(color: PdfColors.white, fontSize: 5), alignment: pw.Alignment.center),
-          _buildTableCell('V', boldStyle.copyWith(color: PdfColors.white, fontSize: 5), alignment: pw.Alignment.center),
-          _buildTableCell('F', boldStyle.copyWith(color: PdfColors.white, fontSize: 5), alignment: pw.Alignment.center),
-          _buildTableCell('NEO', boldStyle.copyWith(color: PdfColors.white, fontSize: 5), alignment: pw.Alignment.center),
-          _buildTableCell('N°', boldStyle.copyWith(color: PdfColors.white, fontSize: 5), alignment: pw.Alignment.center),
-        ],
+          pw.Padding(
+            padding: const pw.EdgeInsets.all(2),
+            child: pw.Text(header.titre, style: boldStyle.copyWith(color: PdfColors.white, fontSize: 7)),
+          ),
+          // Colonnes vides pour le header de catégorie, ou on pourrait fusionner
+          // Fusionner est compliqué avec pw.Table simple sans colspan facile, donc on laisse vide ou on met des placeholders
+           pw.Container(), pw.Container(), pw.Container(), pw.Container(), pw.Container(), pw.Container(),
+        ]
       ),
-      ...items.map((item) {
-        if (item.isCategory) {
-          return pw.TableRow(
-            decoration: pw.BoxDecoration(color: PdfColors.grey300),
-            children: [
-              pw.Container(
-                padding: const pw.EdgeInsets.all(1),
-                child: pw.Text(item.titre, style: boldStyle.copyWith(fontSize: 6)),
-              ),
-              pw.Container(), pw.Container(), pw.Container(), pw.Container(), pw.Container(), pw.Container(),
-            ],
-          );
-        } else {
-          return pw.TableRow(
-            decoration: const pw.BoxDecoration(
-              border: pw.Border(bottom: pw.BorderSide(color: PdfColors.grey200)),
-            ),
-            children: [
-              _buildTableCell(item.titre, style),
-              _buildTableCell(item.status == ColonneStatus.b ? 'X' : '', style, alignment: pw.Alignment.center),
-              _buildTableCell(item.status == ColonneStatus.d ? 'X' : '', style, alignment: pw.Alignment.center),
-              _buildTableCell(item.status == ColonneStatus.v ? 'X' : '', style, alignment: pw.Alignment.center),
-              _buildTableCell(item.status == ColonneStatus.f ? 'X' : '', style, alignment: pw.Alignment.center),
-              _buildTableCell(item.status == ColonneStatus.neo ? 'X' : '', style, alignment: pw.Alignment.center),
-              _buildTableCell(item.numeroObservation, style, alignment: pw.Alignment.center),
-            ],
-          );
-        }
+      // Header des colonnes (Optionnel : Répéter ou mettre une fois en haut de page ?)
+      // Pour gagner de la place, on ne le répète pas à chaque catégorie si c'est clair.
+      // Mais si on a des colonnes séparées, il faut peut-être le mettre ?
+      // Le code original avait un header global. Ici, chaque catégorie est un tableau.
+      // Ajoutons une ligne de header (B, D...) pour chaque catégorie pour la clarté ?
+      // Non, ça prend trop de place. On va supposer que l'entête global suffit.
+      // Mais comme on a 2 colonnes, il faut un entête pour CHAQUE colonne principale.
+
+      // Items
+      ...contentItems.map((item) {
+        return pw.TableRow(
+          decoration: const pw.BoxDecoration(
+            border: pw.Border(bottom: pw.BorderSide(color: PdfColors.grey200)),
+          ),
+          children: [
+            _buildTableCell(item.titre, style),
+            _buildTableCell(item.status == ColonneStatus.b ? 'X' : '', style, alignment: pw.Alignment.center),
+            _buildTableCell(item.status == ColonneStatus.d ? 'X' : '', style, alignment: pw.Alignment.center),
+            _buildTableCell(item.status == ColonneStatus.v ? 'X' : '', style, alignment: pw.Alignment.center),
+            _buildTableCell(item.status == ColonneStatus.f ? 'X' : '', style, alignment: pw.Alignment.center),
+            _buildTableCell(item.status == ColonneStatus.neo ? 'X' : '', style, alignment: pw.Alignment.center),
+            _buildTableCell(item.numeroObservation, style, alignment: pw.Alignment.center),
+          ],
+        );
       }).toList(),
     ],
   );
@@ -530,10 +579,40 @@ pw.Widget _buildStandardChecklistTable(List<ChecklistItem> items, pw.TextStyle b
 
 pw.Widget _buildTableCell(String text, pw.TextStyle style, {pw.Alignment alignment = pw.Alignment.centerLeft}) {
   return pw.Padding(
-    padding: const pw.EdgeInsets.all(1), // Minimal padding
+    padding: const pw.EdgeInsets.all(1.5), // Slightly more padding
     child: pw.Align(
       alignment: alignment,
-      child: pw.Text(text, style: style.copyWith(fontSize: 6)), // Tiny font
+      child: pw.Text(text, style: style.copyWith(fontSize: 7)),
     ),
+  );
+}
+
+// Header pour les colonnes de checklist (B, D, V, F, NEO, N°)
+pw.Widget _buildTableHeader(pw.TextStyle boldStyle) {
+  return pw.Table(
+    border: pw.TableBorder.all(color: PdfColors.grey400, width: 0.5),
+    columnWidths: const {
+      0: pw.FlexColumnWidth(4), // Item
+      1: pw.FlexColumnWidth(0.7), // B
+      2: pw.FlexColumnWidth(0.7), // D
+      3: pw.FlexColumnWidth(0.7), // V
+      4: pw.FlexColumnWidth(0.7), // F
+      5: pw.FlexColumnWidth(0.8), // NEO
+      6: pw.FlexColumnWidth(0.8), // N°
+    },
+    children: [
+      pw.TableRow(
+        decoration: const pw.BoxDecoration(color: PdfColors.grey300),
+        children: [
+          _buildTableCell('Rubrique', boldStyle.copyWith(fontSize: 6), alignment: pw.Alignment.center),
+          _buildTableCell('B', boldStyle.copyWith(fontSize: 6), alignment: pw.Alignment.center),
+          _buildTableCell('D', boldStyle.copyWith(fontSize: 6), alignment: pw.Alignment.center),
+          _buildTableCell('V', boldStyle.copyWith(fontSize: 6), alignment: pw.Alignment.center),
+          _buildTableCell('F', boldStyle.copyWith(fontSize: 6), alignment: pw.Alignment.center),
+          _buildTableCell('NEO', boldStyle.copyWith(fontSize: 6), alignment: pw.Alignment.center),
+          _buildTableCell('N°', boldStyle.copyWith(fontSize: 6), alignment: pw.Alignment.center),
+        ],
+      ),
+    ],
   );
 }
