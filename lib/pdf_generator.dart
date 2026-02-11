@@ -110,7 +110,8 @@ Future<String> generateRapportInitial(RapportVerification rapport) async {
             pw.SizedBox(height: 2),
 
             // Deux colonnes pour le reste
-            pw.Expanded(
+            // Using Flexible with tight fit to ensure it takes remaining space but respects boundaries
+            pw.Flexible(
               child: pw.Row(
                 crossAxisAlignment: pw.CrossAxisAlignment.start,
                 children: [
@@ -244,12 +245,18 @@ Future<String> generateRapportFinal(RapportVerification rapport) async {
             // Types de vérification
             pw.Text('TYPE DE VÉRIFICATION', style: sectionStyle),
             pw.Divider(color: primaryColor, height: 2),
-            if (rapport.typesVerification.contains(TypeVerification.miseEnService))
-              pw.Text('☑ Vérification de mise en service (Article R4323-22)', style: customStyle.copyWith(fontSize: 8)),
-            if (rapport.typesVerification.contains(TypeVerification.generalePeriodique))
-              pw.Text('☑ Vérification générale périodique (VGP)(Article R4323-23, 24, 25, 26, 27)', style: customStyle.copyWith(fontSize: 8)),
-            if (rapport.typesVerification.contains(TypeVerification.remiseEnService))
-              pw.Text('☑ Vérification de remise en service (Article R4323-28)', style: customStyle.copyWith(fontSize: 8)),
+            pw.Text(
+              '${rapport.typesVerification.contains(TypeVerification.miseEnService) ? "☑" : "☐"} Vérification de mise en service (Article R4323-22)',
+              style: customStyle.copyWith(fontSize: 8),
+            ),
+            pw.Text(
+              '${rapport.typesVerification.contains(TypeVerification.generalePeriodique) ? "☑" : "☐"} Vérification générale périodique (VGP)(Article R4323-23, 24, 25, 26, 27)',
+              style: customStyle.copyWith(fontSize: 8),
+            ),
+            pw.Text(
+              '${rapport.typesVerification.contains(TypeVerification.remiseEnService) ? "☑" : "☐"} Vérification de remise en service (Article R4323-28)',
+              style: customStyle.copyWith(fontSize: 8),
+            ),
 
             pw.SizedBox(height: 5),
 
