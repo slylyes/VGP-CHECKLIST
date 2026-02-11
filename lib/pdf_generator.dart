@@ -22,9 +22,9 @@ Future<String> generateRapportInitial(RapportVerification rapport) async {
   
   final pdf = pw.Document();
 
-  final customStyle = pw.TextStyle(fontSize: 10, color: PdfColors.black, font: ttf); // Reduced font size slightly
+  final customStyle = pw.TextStyle(fontSize: 6.5, color: PdfColors.black, font: ttf); // Reduced font size significantly
   final boldStyle = customStyle.copyWith(fontWeight: pw.FontWeight.bold);
-  final titleStyle = boldStyle.copyWith(fontSize: 14, color: primaryColor);
+  final titleStyle = boldStyle.copyWith(fontSize: 10, color: primaryColor);
 
   final dateFormatter = DateFormat('dd/MM/yyyy');
   final dateActuelle = dateFormatter.format(rapport.dateVerification);
@@ -34,15 +34,16 @@ Future<String> generateRapportInitial(RapportVerification rapport) async {
   final conditionsItems = rapport.checklist.where((i) => i.type == ChecklistType.ouiNon).toList();
   final standardItems = rapport.checklist.where((i) => i.type == ChecklistType.standard).toList();
 
-  // Split standard items into two columns
-  final midPoint = (standardItems.length / 2).ceil();
-  final leftItems = standardItems.sublist(0, midPoint);
-  final rightItems = standardItems.sublist(midPoint);
+  // Split standard items into THREE columns for maximum compactness
+  final third = (standardItems.length / 3).ceil();
+  final col1 = standardItems.sublist(0, third);
+  final col2 = standardItems.sublist(third, 2 * third);
+  final col3 = standardItems.sublist(2 * third);
 
   pdf.addPage(
     pw.Page(
       pageFormat: PdfPageFormat.a4,
-      margin: const pw.EdgeInsets.all(10), // Reduced margin
+      margin: const pw.EdgeInsets.all(5), // Minimal margin
       build: (pw.Context context) {
         return pw.Column(
           crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -50,39 +51,39 @@ Future<String> generateRapportInitial(RapportVerification rapport) async {
             // Logo et Titre
             pw.Row(
               children: [
-                 pw.Image(logoImage, width: 60, height: 40, fit: pw.BoxFit.contain),
-                 pw.SizedBox(width: 20),
+                 pw.Image(logoImage, width: 40, height: 25, fit: pw.BoxFit.contain), // Smaller logo
+                 pw.SizedBox(width: 10),
                  pw.Expanded(
                    child: pw.Text(
                     'VÉRIFICATIONS RÈGLEMENTAIRES DES HAYON ÉLÉVATEURS\n(COMPTE RENDU INITIAL)',
-                    style: boldStyle.copyWith(fontSize: 12, color: primaryColor),
+                    style: boldStyle.copyWith(fontSize: 9, color: primaryColor), // Smaller title
                     textAlign: pw.TextAlign.center,
                   ),
                  ),
               ]
             ),
-            pw.SizedBox(height: 5),
+            pw.SizedBox(height: 2),
 
             // Infos Client et Dates
             pw.Container(
-              padding: const pw.EdgeInsets.all(5),
+              padding: const pw.EdgeInsets.all(2),
               decoration: pw.BoxDecoration(border: pw.Border.all(color: PdfColors.grey400)),
               child: pw.Row(
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
-                  pw.Text('Client : ${rapport.nomClient}', style: boldStyle.copyWith(fontSize: 9)),
-                  pw.Text('Date : $dateActuelle', style: boldStyle.copyWith(fontSize: 9)),
-                  pw.Text('Prochaine : $dateProchaine', style: boldStyle.copyWith(fontSize: 9)),
+                  pw.Text('Client : ${rapport.nomClient}', style: boldStyle.copyWith(fontSize: 7)),
+                  pw.Text('Date : $dateActuelle', style: boldStyle.copyWith(fontSize: 7)),
+                  pw.Text('Prochaine : $dateProchaine', style: boldStyle.copyWith(fontSize: 7)),
                 ],
               ),
             ),
-            pw.SizedBox(height: 5),
+            pw.SizedBox(height: 2),
 
             // Tableau Conditions Préalables
             if (conditionsItems.isNotEmpty)
                _buildConditionsTable(conditionsItems, boldStyle, customStyle),
 
-            pw.SizedBox(height: 5),
+            pw.SizedBox(height: 2),
 
             // Section légende standard
             pw.Row(
@@ -90,18 +91,18 @@ Future<String> generateRapportInitial(RapportVerification rapport) async {
               children: [
                  pw.Text(
                   'EXAMEN DE L\'ÉTAT DE CONSERVATION',
-                  style: titleStyle.copyWith(fontSize: 10),
+                  style: titleStyle.copyWith(fontSize: 8),
                 ),
                 pw.Column(
                   crossAxisAlignment: pw.CrossAxisAlignment.end,
                   children: [
                     pw.Text(
                       'B = Bon | D = Défaut | V = Visuel | F = Fonctionnel | NEO = Non équipé',
-                      style: customStyle.copyWith(fontStyle: pw.FontStyle.italic, fontSize: 6),
+                      style: customStyle.copyWith(fontStyle: pw.FontStyle.italic, fontSize: 5),
                     ),
                     pw.Text(
                       'N° = n° d\'observation à reporter',
-                      style: customStyle.copyWith(fontStyle: pw.FontStyle.italic, fontSize: 6),
+                      style: customStyle.copyWith(fontStyle: pw.FontStyle.italic, fontSize: 5),
                     ),
                   ]
                 )
@@ -109,18 +110,21 @@ Future<String> generateRapportInitial(RapportVerification rapport) async {
             ),
             pw.SizedBox(height: 2),
 
-            // Deux colonnes pour le reste
-            // Using Flexible with tight fit to ensure it takes remaining space but respects boundaries
-            pw.Flexible(
+            // Trois colonnes pour le reste
+            pw.Expanded(
               child: pw.Row(
                 crossAxisAlignment: pw.CrossAxisAlignment.start,
                 children: [
                   pw.Expanded(
-                    child: _buildStandardChecklistTable(leftItems, boldStyle, customStyle),
+                    child: _buildStandardChecklistTable(col1, boldStyle, customStyle),
                   ),
-                  pw.SizedBox(width: 5),
+                  pw.SizedBox(width: 2),
                   pw.Expanded(
-                    child: _buildStandardChecklistTable(rightItems, boldStyle, customStyle),
+                    child: _buildStandardChecklistTable(col2, boldStyle, customStyle),
+                  ),
+                  pw.SizedBox(width: 2),
+                  pw.Expanded(
+                    child: _buildStandardChecklistTable(col3, boldStyle, customStyle),
                   ),
                 ],
               ),
@@ -158,9 +162,9 @@ Future<String> generateRapportFinal(RapportVerification rapport) async {
   
   final pdf = pw.Document();
 
-  final customStyle = pw.TextStyle(fontSize: 9, color: PdfColors.black, font: ttf);
+  final customStyle = pw.TextStyle(fontSize: 8, color: PdfColors.black, font: ttf);
   final boldStyle = customStyle.copyWith(fontWeight: pw.FontWeight.bold);
-  final sectionStyle = boldStyle.copyWith(fontSize: 10, color: primaryColor);
+  final sectionStyle = boldStyle.copyWith(fontSize: 9, color: primaryColor);
 
   final dateFormatter = DateFormat('dd/MM/yyyy');
   final dateActuelle = dateFormatter.format(rapport.dateVerification);
@@ -176,7 +180,7 @@ Future<String> generateRapportFinal(RapportVerification rapport) async {
           children: [
             // Logo
             pw.Center(
-              child: pw.Image(logoImage, width: 60, height: 40, fit: pw.BoxFit.contain),
+              child: pw.Image(logoImage, width: 50, height: 35, fit: pw.BoxFit.contain),
             ),
             
             // Titre
@@ -245,28 +249,46 @@ Future<String> generateRapportFinal(RapportVerification rapport) async {
             // Types de vérification
             pw.Text('TYPE DE VÉRIFICATION', style: sectionStyle),
             pw.Divider(color: primaryColor, height: 2),
-            pw.Text(
-              '${rapport.typesVerification.contains(TypeVerification.miseEnService) ? "☑" : "☐"} Vérification de mise en service (Article R4323-22)',
-              style: customStyle.copyWith(fontSize: 8),
+            pw.Row(
+              children: [
+                pw.Text(
+                  rapport.typesVerification.contains(TypeVerification.miseEnService) ? "[X]" : "[ ]",
+                  style: boldStyle.copyWith(fontSize: 10),
+                ),
+                pw.SizedBox(width: 5),
+                pw.Expanded(child: pw.Text('Vérification de mise en service (Article R4323-22)', style: customStyle.copyWith(fontSize: 7))),
+              ]
             ),
-            pw.Text(
-              '${rapport.typesVerification.contains(TypeVerification.generalePeriodique) ? "☑" : "☐"} Vérification générale périodique (VGP)(Article R4323-23, 24, 25, 26, 27)',
-              style: customStyle.copyWith(fontSize: 8),
+             pw.Row(
+              children: [
+                pw.Text(
+                  rapport.typesVerification.contains(TypeVerification.generalePeriodique) ? "[X]" : "[ ]",
+                  style: boldStyle.copyWith(fontSize: 10),
+                ),
+                pw.SizedBox(width: 5),
+                pw.Expanded(child: pw.Text('Vérification générale périodique (VGP)(Article R4323-23, 24, 25, 26, 27)', style: customStyle.copyWith(fontSize: 7))),
+              ]
             ),
-            pw.Text(
-              '${rapport.typesVerification.contains(TypeVerification.remiseEnService) ? "☑" : "☐"} Vérification de remise en service (Article R4323-28)',
-              style: customStyle.copyWith(fontSize: 8),
+             pw.Row(
+              children: [
+                pw.Text(
+                  rapport.typesVerification.contains(TypeVerification.remiseEnService) ? "[X]" : "[ ]",
+                  style: boldStyle.copyWith(fontSize: 10),
+                ),
+                pw.SizedBox(width: 5),
+                pw.Expanded(child: pw.Text('Vérification de remise en service (Article R4323-28)', style: customStyle.copyWith(fontSize: 7))),
+              ]
             ),
 
             pw.SizedBox(height: 5),
 
             // Texte légal
             pw.Container(
-              padding: const pw.EdgeInsets.all(4),
+              padding: const pw.EdgeInsets.all(2),
               decoration: pw.BoxDecoration(border: pw.Border.all(color: primaryColor, width: 0.5)),
               child: pw.Text(
                 "Selon les articles R.4323-22 à R.4323-28 du code du travail et arrêté du 1er mars 2004 relatif aux vérifications des appareils de levage.\nPossibilité d'imprimer l'arrêté sur www.vgp-online.fr\nRecommandations d'utilisation qui définissent les conditions d'obtention du certificat d'aptitude à la conduite en sécurité",
-                style: customStyle.copyWith(fontSize: 6),
+                style: customStyle.copyWith(fontSize: 5),
                 textAlign: pw.TextAlign.center,
               ),
             ),
@@ -286,9 +308,18 @@ Future<String> generateRapportFinal(RapportVerification rapport) async {
                       ...rapport.documentsObligatoires.map((doc) {
                         return pw.Padding(
                           padding: const pw.EdgeInsets.only(bottom: 2),
-                          child: pw.Text(
-                            '${doc.fourni ? "☑" : "☐"} ${doc.titre}',
-                            style: customStyle.copyWith(fontSize: 7),
+                          child: pw.Row(
+                            crossAxisAlignment: pw.CrossAxisAlignment.start,
+                            children: [
+                              pw.Text(
+                                doc.fourni ? "[X]" : "[ ]",
+                                style: boldStyle.copyWith(fontSize: 9),
+                              ),
+                              pw.SizedBox(width: 4),
+                              pw.Expanded(
+                                child: pw.Text(doc.titre, style: customStyle.copyWith(fontSize: 6)),
+                              ),
+                            ],
                           ),
                         );
                       }).toList(),
@@ -328,7 +359,7 @@ Future<String> generateRapportFinal(RapportVerification rapport) async {
             pw.Divider(color: primaryColor, height: 2),
             pw.Text(
               'Défauts susceptibles d\'engendrer un danger :',
-              style: customStyle.copyWith(fontSize: 8, fontWeight: pw.FontWeight.bold),
+              style: customStyle.copyWith(fontSize: 7, fontWeight: pw.FontWeight.bold),
             ),
             ...List.generate(4, (index) {
               final defaut = index < rapport.defauts.length ? rapport.defauts[index] : '';
@@ -336,7 +367,7 @@ Future<String> generateRapportFinal(RapportVerification rapport) async {
                 decoration: const pw.BoxDecoration(
                   border: pw.Border(bottom: pw.BorderSide(color: PdfColors.grey300)),
                 ),
-                child: pw.Text('N° ${index + 1}: $defaut', style: customStyle.copyWith(fontSize: 7)),
+                child: pw.Text('N° ${index + 1}: $defaut', style: customStyle.copyWith(fontSize: 6)),
               );
             }),
             pw.SizedBox(height: 5),
@@ -347,21 +378,27 @@ Future<String> generateRapportFinal(RapportVerification rapport) async {
              pw.Row(
                children: [
                  pw.Text(
-                  '${rapport.appareilUtilisable ? "☑" : "☐"} L\'appareil peut être utilisé',
+                  rapport.appareilUtilisable ? "[X]" : "[ ]",
                   style: boldStyle.copyWith(fontSize: 9),
                 ),
+                pw.SizedBox(width: 5),
+                pw.Text('L\'appareil peut être utilisé', style: customStyle.copyWith(fontSize: 7)),
+
                 pw.SizedBox(width: 20),
+
                 pw.Text(
-                  '${rapport.contreVisiteObligatoire ? "☑" : "☐"} Contre-visite obligatoire',
+                  rapport.contreVisiteObligatoire ? "[X]" : "[ ]",
                   style: boldStyle.copyWith(fontSize: 9),
                 ),
+                pw.SizedBox(width: 5),
+                pw.Text('Contre-visite obligatoire', style: customStyle.copyWith(fontSize: 7)),
                ]
              ),
 
              pw.SizedBox(height: 5),
              pw.Text(
               'Rappel : le chef d\'établissement de l\'appareil doit consigner le résultat des vérifications règlementaires, sur le registre de sécurité prévu à l\'article L.4711-5 du code du travail et tenir à jour le carnet de maintenance prévu aux articles R.4323-19.',
-              style: customStyle.copyWith(fontStyle: pw.FontStyle.italic, fontSize: 6),
+              style: customStyle.copyWith(fontStyle: pw.FontStyle.italic, fontSize: 5),
               textAlign: pw.TextAlign.justify
             ),
           ],
@@ -391,8 +428,8 @@ Future<String> generateRapportFinal(RapportVerification rapport) async {
 pw.Widget _buildInfoRow(String label, String value, pw.TextStyle boldStyle, pw.TextStyle style) {
   return pw.Row(
     children: [
-      pw.Container(width: 55, child: pw.Text(label, style: boldStyle.copyWith(fontSize: 7))),
-      pw.Expanded(child: pw.Text(value, style: style.copyWith(fontSize: 7), maxLines: 1, overflow: pw.TextOverflow.clip)),
+      pw.Container(width: 45, child: pw.Text(label, style: boldStyle.copyWith(fontSize: 6))),
+      pw.Expanded(child: pw.Text(value, style: style.copyWith(fontSize: 6), maxLines: 1, overflow: pw.TextOverflow.clip)),
     ],
   );
 }
@@ -449,13 +486,13 @@ pw.Widget _buildStandardChecklistTable(List<ChecklistItem> items, pw.TextStyle b
       pw.TableRow(
         decoration: const pw.BoxDecoration(color: primaryColor),
         children: [
-          _buildTableCell('Item', boldStyle.copyWith(color: PdfColors.white, fontSize: 6)),
-          _buildTableCell('B', boldStyle.copyWith(color: PdfColors.white, fontSize: 6), alignment: pw.Alignment.center),
-          _buildTableCell('D', boldStyle.copyWith(color: PdfColors.white, fontSize: 6), alignment: pw.Alignment.center),
-          _buildTableCell('V', boldStyle.copyWith(color: PdfColors.white, fontSize: 6), alignment: pw.Alignment.center),
-          _buildTableCell('F', boldStyle.copyWith(color: PdfColors.white, fontSize: 6), alignment: pw.Alignment.center),
-          _buildTableCell('NEO', boldStyle.copyWith(color: PdfColors.white, fontSize: 6), alignment: pw.Alignment.center),
-          _buildTableCell('N°', boldStyle.copyWith(color: PdfColors.white, fontSize: 6), alignment: pw.Alignment.center),
+          _buildTableCell('Item', boldStyle.copyWith(color: PdfColors.white, fontSize: 5)),
+          _buildTableCell('B', boldStyle.copyWith(color: PdfColors.white, fontSize: 5), alignment: pw.Alignment.center),
+          _buildTableCell('D', boldStyle.copyWith(color: PdfColors.white, fontSize: 5), alignment: pw.Alignment.center),
+          _buildTableCell('V', boldStyle.copyWith(color: PdfColors.white, fontSize: 5), alignment: pw.Alignment.center),
+          _buildTableCell('F', boldStyle.copyWith(color: PdfColors.white, fontSize: 5), alignment: pw.Alignment.center),
+          _buildTableCell('NEO', boldStyle.copyWith(color: PdfColors.white, fontSize: 5), alignment: pw.Alignment.center),
+          _buildTableCell('N°', boldStyle.copyWith(color: PdfColors.white, fontSize: 5), alignment: pw.Alignment.center),
         ],
       ),
       ...items.map((item) {
@@ -464,8 +501,8 @@ pw.Widget _buildStandardChecklistTable(List<ChecklistItem> items, pw.TextStyle b
             decoration: pw.BoxDecoration(color: PdfColors.grey300),
             children: [
               pw.Container(
-                padding: const pw.EdgeInsets.all(2),
-                child: pw.Text(item.titre, style: boldStyle.copyWith(fontSize: 7)),
+                padding: const pw.EdgeInsets.all(1),
+                child: pw.Text(item.titre, style: boldStyle.copyWith(fontSize: 6)),
               ),
               pw.Container(), pw.Container(), pw.Container(), pw.Container(), pw.Container(), pw.Container(),
             ],
@@ -493,10 +530,10 @@ pw.Widget _buildStandardChecklistTable(List<ChecklistItem> items, pw.TextStyle b
 
 pw.Widget _buildTableCell(String text, pw.TextStyle style, {pw.Alignment alignment = pw.Alignment.centerLeft}) {
   return pw.Padding(
-    padding: const pw.EdgeInsets.all(1.5), // Reduced padding
+    padding: const pw.EdgeInsets.all(1), // Minimal padding
     child: pw.Align(
       alignment: alignment,
-      child: pw.Text(text, style: style.copyWith(fontSize: 6.5)), // Small font
+      child: pw.Text(text, style: style.copyWith(fontSize: 6)), // Tiny font
     ),
   );
 }
