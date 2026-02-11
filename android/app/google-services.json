@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "460180232188",
+    "project_id": "verif-car",
+    "storage_bucket": "verif-car.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:460180232188:android:6fc974e2d1395f69164479",
+        "android_client_info": {
+          "package_name": "com.example.formulaire_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDyfL5KM8yw7WiGz3vuoODbyBEjW7HtUFA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
