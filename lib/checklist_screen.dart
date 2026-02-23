@@ -146,29 +146,30 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
                 ],
               ),
             
-            const SizedBox(height: 8),
-            
-            // Champ pour le numéro d'observation
-            Row(
-              children: [
-                const Text('N° : ', style: TextStyle(fontWeight: FontWeight.bold)),
-                Expanded(
-                  child: TextField(
-                    decoration: const InputDecoration(
-                      hintText: 'N° observation',
-                      isDense: true,
-                      border: OutlineInputBorder(),
+            // Champ pour le numéro d'observation (uniquement pour les items standard)
+            if (item.type != ChecklistType.ouiNon) ...[
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  const Text('N° : ', style: TextStyle(fontWeight: FontWeight.bold)),
+                  Expanded(
+                    child: TextField(
+                      decoration: const InputDecoration(
+                        hintText: 'N° observation',
+                        isDense: true,
+                        border: OutlineInputBorder(),
+                      ),
+                      onChanged: (value) {
+                        setState(() {
+                          item.numeroObservation = value;
+                        });
+                      },
+                      controller: TextEditingController(text: item.numeroObservation),
                     ),
-                    onChanged: (value) {
-                      setState(() {
-                        item.numeroObservation = value;
-                      });
-                    },
-                    controller: TextEditingController(text: item.numeroObservation),
                   ),
-                ),
-              ],
-            ),
+                ],
+              ),
+            ],
           ],
         ),
       ),
