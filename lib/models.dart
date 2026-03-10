@@ -35,8 +35,9 @@ extension ColonneStatusExtension on ColonneStatus {
 
 // Type d'affichage de la checklist
 enum ChecklistType {
-  standard, // B, D, V, F, NEO
-  ouiNon,   // OUI, NON
+  standard,              // B, D, V, F, NEO
+  ouiNon,                // OUI, NON (sans N° observation)
+  ouiNonAvecObservation, // OUI, NON (avec N° observation)
 }
 
 // Représente un seul point de vérification avec le nouveau système
@@ -174,18 +175,21 @@ List<ChecklistItem> get defaultChecklist {
     
     // --- DOCUMENTS REGLEMENTAIRE A PRESENTER ---
     ChecklistItem(titre: 'DOCUMENTS REGLEMENTAIRE A PRESENTER', isCategory: true),
-    ChecklistItem(titre: 'Certificat de conformité + épreuve de mise en service'),
-    ChecklistItem(titre: 'Manuel d\'utilisation (Article R4323-1)'),
-    ChecklistItem(titre: 'Rapport(s) de vérification précédent(s) (Article L4711-1)'),
-    ChecklistItem(titre: 'Carnet de maintenance (Article R4323-19, 20)'),
-    ChecklistItem(titre: 'Registre de sécurité (Article R4323-26, 27)'),
+    ChecklistItem(titre: 'Certificat de conformité + épreuve de mise en service', type: ChecklistType.ouiNonAvecObservation),
+    ChecklistItem(titre: 'Manuel d\'utilisation (Article R4323-1)', type: ChecklistType.ouiNonAvecObservation),
+    ChecklistItem(titre: 'Rapport(s) de vérification précédent(s) (Article L4711-1)', type: ChecklistType.ouiNonAvecObservation),
+    ChecklistItem(titre: 'Carnet de maintenance (Article R4323-19, 20)', type: ChecklistType.ouiNonAvecObservation),
+    ChecklistItem(titre: 'Registre de sécurité (Article R4323-26, 27)', type: ChecklistType.ouiNonAvecObservation),
+    
+    // --- OSSATURE ET PLATEAU (OUI/NON séparé) ---
+    ChecklistItem(titre: 'OSSATURE ET PLATEAU', isCategory: true, type: ChecklistType.ouiNonAvecObservation),
+    ChecklistItem(titre: 'Ossature déformée', type: ChecklistType.ouiNonAvecObservation),
+    ChecklistItem(titre: 'Plateau déformé', type: ChecklistType.ouiNonAvecObservation),
     
     // --- CHARPENTES/MECANISMES ---
     ChecklistItem(titre: 'CHARPENTES/MECANISMES', isCategory: true),
     ChecklistItem(titre: 'Oxydation'),
     ChecklistItem(titre: 'État soudures'),
-    ChecklistItem(titre: 'Ossature déformée'),
-    ChecklistItem(titre: 'Plateau déformé'),
     ChecklistItem(titre: 'État des flexibles'),
     ChecklistItem(titre: 'Fonctionnement'),
     ChecklistItem(titre: 'Signalisation de la plate-forme'),
@@ -223,7 +227,7 @@ List<ChecklistItem> get defaultChecklist {
     ChecklistItem(titre: 'Abaque de charges (un à chaque poste de commande)'),
     ChecklistItem(titre: 'Consignes de sécurité avec dateur de contrôle Périodique'),
     ChecklistItem(titre: 'Vidange du groupe'),
-    ChecklistItem(titre: 'Maintenance : 1 graissage 14 points'),
+    ChecklistItem(titre: 'Graissage'),
     
     // --- MOUVEMENTS ---
     ChecklistItem(titre: 'MOUVEMENTS', isCategory: true),
@@ -234,11 +238,11 @@ List<ChecklistItem> get defaultChecklist {
     ChecklistItem(titre: 'Sortie'),
     ChecklistItem(titre: 'Rentrée'),
     
-    // --- EXAMENS ET ÉPREUVES ---
-    ChecklistItem(titre: 'EXAMENS ET ÉPREUVES', isCategory: true),
-    ChecklistItem(titre: 'Épreuve dynamique (C.M.U. + 10 % ou valeur constructeur; 15 mn recommandation VGP)'),
-    ChecklistItem(titre: 'Charge d\'essai : 750 Kg à une distance mesurée de : 0.600 m'),
-    ChecklistItem(titre: 'Est-ce que les dispositifs de limitation de la surcharge se sont déclenchés ?'),
-    ChecklistItem(titre: 'Est-ce que les dispositifs de sécurité du maintien de la charge fonctionnent ?'),
+    // --- EXAMENS ET ÉPREUVES (OUI/NON séparé) ---
+    ChecklistItem(titre: 'EXAMENS ET ÉPREUVES', isCategory: true, type: ChecklistType.ouiNonAvecObservation),
+    ChecklistItem(titre: 'Épreuve dynamique (C.M.U. + 10 % ou valeur constructeur; 15 mn recommandation VGP)', type: ChecklistType.ouiNonAvecObservation),
+    ChecklistItem(titre: 'Mise à disposition de charges d\'essai', type: ChecklistType.ouiNonAvecObservation),
+    ChecklistItem(titre: 'Est-ce que les dispositifs de limitation de la surcharge se sont déclenchés ?', type: ChecklistType.ouiNonAvecObservation),
+    ChecklistItem(titre: 'Est-ce que les dispositifs de sécurité du maintien de la charge fonctionnent ?', type: ChecklistType.ouiNonAvecObservation),
   ];
 }

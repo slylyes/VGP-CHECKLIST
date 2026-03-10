@@ -40,27 +40,39 @@ Future<String> generateRapportInitial(RapportVerification rapport) async {
   final dateActuelle = dateFormatter.format(rapport.dateVerification);
   final dateProchaine = dateFormatter.format(rapport.dateProchainControle);
 
-  // Séparation des items
+  // --- Auto-numérotation des observations ---
+  final Map<ChecklistItem, int> observationNumbers = {};
+  int obsCounter = 1;
+  for (var item in rapport.checklist) {
+    if (!item.isCategory && item.numeroObservation.isNotEmpty) {
+      observationNumbers[item] = obsCounter;
+      obsCounter++;
+    }
+  }
+
+  // Séparation des items par type de rendu
   final conditionsItems = rapport.checklist.where((i) => i.type == ChecklistType.ouiNon).toList();
-  final standardItems = rapport.checklist.where((i) => i.type == ChecklistType.standard).toList();
+  final allOtherItems = rapport.checklist.where((i) => i.type != ChecklistType.ouiNon).toList();
 
-  // Group standard items by category for layout
-  final List<List<ChecklistItem>> categories = [];
+  // Grouper par catégorie
+  final List<List<ChecklistItem>> allCategories = [];
   List<ChecklistItem> currentCategory = [];
-
-  for (var item in standardItems) {
+  for (var item in allOtherItems) {
     if (item.isCategory) {
-      if (currentCategory.isNotEmpty) {
-        categories.add(List.from(currentCategory));
-      }
+      if (currentCategory.isNotEmpty) allCategories.add(List.from(currentCategory));
       currentCategory = [item];
     } else {
       currentCategory.add(item);
     }
   }
-  if (currentCategory.isNotEmpty) {
-    categories.add(List.from(currentCategory));
-  }
+  if (currentCategory.isNotEmpty) allCategories.add(List.from(currentCategory));
+
+  // Séparer les catégories spéciales (OUI/NON séparées) des catégories standard (7 colonnes)
+  final examensCategories = allCategories.where((cat) => cat.first.titre == 'EXAMENS ET ÉPREUVES').toList();
+  final ossatureCategories = allCategories.where((cat) => cat.first.titre == 'OSSATURE ET PLATEAU').toList();
+  final standardCategories = allCategories.where((cat) =>
+    cat.first.titre != 'EXAMENS ET ÉPREUVES' && cat.first.titre != 'OSSATURE ET PLATEAU'
+  ).toList();
 
   pdf.addPage(
     pw.Page(
@@ -111,6 +123,13 @@ Future<String> generateRapportInitial(RapportVerification rapport) async {
 
             pw.SizedBox(height: 4),
 
+            // Tableau OSSATURE ET PLATEAU (OUI/NON séparé)
+            if (ossatureCategories.isNotEmpty)
+              _buildOuiNonSeparateTableCompact(
+                ossatureCategories.first, boldStyle, customStyle, observationNumbers),
+
+            pw.SizedBox(height: 4),
+
             // Section légende standard
             pw.Row(
               mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
@@ -127,22 +146,24 @@ Future<String> generateRapportInitial(RapportVerification rapport) async {
             ),
             pw.SizedBox(height: 3),
 
-            // Tableau unique en une seule colonne
+            // Tableau standard en une seule colonne (7 colonnes)
             _buildTableHeaderCompact(boldStyle),
-            ...categories.map((cat) => _buildCategoryTableCompact(cat, boldStyle, customStyle)),
+            ...standardCategories.map((cat) => _buildCategoryTableCompact(cat, boldStyle, customStyle, observationNumbers)),
+
+            pw.SizedBox(height: 4),
+
+            // Tableau EXAMENS ET ÉPREUVES (OUI/NON séparé)
+            if (examensCategories.isNotEmpty)
+              _buildOuiNonSeparateTableCompact(
+                examensCategories.first, boldStyle, customStyle, observationNumbers),
           ],
         );
       },
     ),
   );
 
-  // Sauvegarde
-  Directory? directory;
-  if (Platform.isAndroid) {
-    directory = Directory('/storage/emulated/0/Download');
-  } else {
-    directory = await getApplicationDocumentsDirectory();
-  }
+  // Sauvegarde dans le répertoire temporaire de l'app (compatible Android 11+)
+  final directory = await getTemporaryDirectory();
 
   final fileName = 'rapport_initial_${rapport.immatriculation}_${DateTime.now().millisecondsSinceEpoch}.pdf';
   final path = '${directory.path}/$fileName';
@@ -361,25 +382,35 @@ Future<String> generateRapportFinal(RapportVerification rapport) async {
             ),
             pw.SizedBox(height: 8),
 
-            // Remarques
+            // Remarques - observations auto-collectées + remarques supplémentaires
             pw.Text('REMARQUES', style: sectionStyle),
             pw.Divider(color: primaryColor, height: 2),
             pw.SizedBox(height: 2),
             pw.Text(
-              'Défauts susceptibles d\'engendrer un danger :',
+              'Observations issues de la vérification :',
               style: customStyle.copyWith(fontSize: 8, fontWeight: pw.FontWeight.bold),
             ),
             pw.SizedBox(height: 2),
-            ...List.generate(8, (index) {
-              final defaut = index < rapport.defauts.length ? rapport.defauts[index] : '';
-              return pw.Container(
-                padding: const pw.EdgeInsets.symmetric(vertical: 1),
-                decoration: const pw.BoxDecoration(
-                  border: pw.Border(bottom: pw.BorderSide(color: PdfColors.grey300)),
-                ),
-                child: pw.Text('N° ${index + 1}: $defaut', style: customStyle.copyWith(fontSize: 7.5)),
-              );
-            }),
+            // Auto-collected observations from checklist items
+            ..._buildObservationsFromChecklist(rapport, customStyle),
+            // Manual additional remarks
+            if (rapport.defauts.where((d) => d.isNotEmpty).isNotEmpty) ...[
+              pw.SizedBox(height: 4),
+              pw.Text(
+                'Remarques supplémentaires :',
+                style: customStyle.copyWith(fontSize: 8, fontWeight: pw.FontWeight.bold),
+              ),
+              pw.SizedBox(height: 2),
+              ...rapport.defauts.where((d) => d.isNotEmpty).map((defaut) {
+                return pw.Container(
+                  padding: const pw.EdgeInsets.symmetric(vertical: 1),
+                  decoration: const pw.BoxDecoration(
+                    border: pw.Border(bottom: pw.BorderSide(color: PdfColors.grey300)),
+                  ),
+                  child: pw.Text('• $defaut', style: customStyle.copyWith(fontSize: 7.5)),
+                );
+              }),
+            ],
             pw.SizedBox(height: 8),
 
             // Conclusions
@@ -418,13 +449,8 @@ Future<String> generateRapportFinal(RapportVerification rapport) async {
     ),
   );
 
-  // Sauvegarde
-  Directory? directory;
-  if (Platform.isAndroid) {
-    directory = Directory('/storage/emulated/0/Download');
-  } else {
-    directory = await getApplicationDocumentsDirectory();
-  }
+  // Sauvegarde dans le répertoire temporaire de l'app (compatible Android 11+)
+  final directory = await getTemporaryDirectory();
 
   final fileName = 'rapport_final_${rapport.immatriculation}_${DateTime.now().millisecondsSinceEpoch}.pdf';
   final path = '${directory.path}/$fileName';
@@ -435,6 +461,38 @@ Future<String> generateRapportFinal(RapportVerification rapport) async {
 }
 
 // --- HELPERS ---
+
+// Auto-collect observations from checklist items for the final report REMARQUES
+List<pw.Widget> _buildObservationsFromChecklist(RapportVerification rapport, pw.TextStyle style) {
+  final widgets = <pw.Widget>[];
+  int obsNum = 1;
+  for (var item in rapport.checklist) {
+    if (!item.isCategory && item.numeroObservation.isNotEmpty) {
+      widgets.add(
+        pw.Container(
+          padding: const pw.EdgeInsets.symmetric(vertical: 1),
+          decoration: const pw.BoxDecoration(
+            border: pw.Border(bottom: pw.BorderSide(color: PdfColors.grey300)),
+          ),
+          child: pw.Text(
+            'N° $obsNum - ${item.titre} : ${item.numeroObservation}',
+            style: style.copyWith(fontSize: 7.5),
+          ),
+        ),
+      );
+      obsNum++;
+    }
+  }
+  if (widgets.isEmpty) {
+    widgets.add(
+      pw.Container(
+        padding: const pw.EdgeInsets.symmetric(vertical: 1),
+        child: pw.Text('Aucune observation.', style: style.copyWith(fontSize: 7.5, fontStyle: pw.FontStyle.italic)),
+      ),
+    );
+  }
+  return widgets;
+}
 
 pw.Widget _buildInfoRowFinal(String label, String value, pw.TextStyle boldStyle, pw.TextStyle style) {
   return pw.Padding(
@@ -490,6 +548,50 @@ pw.Widget _buildConditionsTableCompact(List<ChecklistItem> items, pw.TextStyle b
   );
 }
 
+// Table OUI/NON séparée pour OSSATURE ET PLATEAU et EXAMENS ET ÉPREUVES
+pw.Widget _buildOuiNonSeparateTableCompact(
+  List<ChecklistItem> items,
+  pw.TextStyle boldStyle,
+  pw.TextStyle style,
+  Map<ChecklistItem, int> observationNumbers,
+) {
+  if (items.isEmpty) return pw.Container();
+
+  final header = items.first;
+  final contentItems = items.skip(1).toList();
+
+  return pw.Table(
+    border: pw.TableBorder.all(color: PdfColors.grey400, width: 0.5),
+    columnWidths: const {
+      0: pw.FlexColumnWidth(6),
+      1: pw.FlexColumnWidth(1),
+      2: pw.FlexColumnWidth(1),
+      3: pw.FlexColumnWidth(0.7),
+    },
+    children: [
+      pw.TableRow(
+        decoration: const pw.BoxDecoration(color: primaryColor),
+        children: [
+          _buildCompactCell(header.titre, boldStyle.copyWith(color: PdfColors.white, fontSize: 6.5)),
+          _buildCompactCell('OUI', boldStyle.copyWith(color: PdfColors.white, fontSize: 6.5), alignment: pw.Alignment.center),
+          _buildCompactCell('NON', boldStyle.copyWith(color: PdfColors.white, fontSize: 6.5), alignment: pw.Alignment.center),
+          _buildCompactCell('N°', boldStyle.copyWith(color: PdfColors.white, fontSize: 6.5), alignment: pw.Alignment.center),
+        ],
+      ),
+      ...contentItems.map((item) {
+        return pw.TableRow(
+          children: [
+            _buildCompactCell(item.titre, style),
+            _buildCompactCell(item.status == ColonneStatus.oui ? 'X' : '', style, alignment: pw.Alignment.center),
+            _buildCompactCell(item.status == ColonneStatus.non ? 'X' : '', style, alignment: pw.Alignment.center),
+            _buildCompactCell(observationNumbers[item]?.toString() ?? '', style, alignment: pw.Alignment.center),
+          ],
+        );
+      }),
+    ],
+  );
+}
+
 pw.Widget _buildTableHeaderCompact(pw.TextStyle boldStyle) {
   return pw.Table(
     border: pw.TableBorder.all(color: PdfColors.grey400, width: 0.5),
@@ -519,7 +621,7 @@ pw.Widget _buildTableHeaderCompact(pw.TextStyle boldStyle) {
   );
 }
 
-pw.Widget _buildCategoryTableCompact(List<ChecklistItem> items, pw.TextStyle boldStyle, pw.TextStyle style) {
+pw.Widget _buildCategoryTableCompact(List<ChecklistItem> items, pw.TextStyle boldStyle, pw.TextStyle style, Map<ChecklistItem, int> observationNumbers) {
   if (items.isEmpty) return pw.Container();
 
   final header = items.first;
@@ -548,6 +650,19 @@ pw.Widget _buildCategoryTableCompact(List<ChecklistItem> items, pw.TextStyle bol
         ]
       ),
       ...contentItems.map((item) {
+        if (item.type == ChecklistType.ouiNonAvecObservation) {
+          return pw.TableRow(
+            children: [
+              _buildCompactCell(item.titre, style),
+              _buildCompactCell(item.status == ColonneStatus.oui ? 'OUI' : '', style, alignment: pw.Alignment.center),
+              _buildCompactCell(item.status == ColonneStatus.non ? 'NON' : '', style, alignment: pw.Alignment.center),
+              _buildCompactCell('', style, alignment: pw.Alignment.center),
+              _buildCompactCell('', style, alignment: pw.Alignment.center),
+              _buildCompactCell('', style, alignment: pw.Alignment.center),
+              _buildCompactCell(observationNumbers[item]?.toString() ?? '', style, alignment: pw.Alignment.center),
+            ],
+          );
+        }
         return pw.TableRow(
           children: [
             _buildCompactCell(item.titre, style),
@@ -556,7 +671,7 @@ pw.Widget _buildCategoryTableCompact(List<ChecklistItem> items, pw.TextStyle bol
             _buildCompactCell(item.status == ColonneStatus.v ? 'X' : '', style, alignment: pw.Alignment.center),
             _buildCompactCell(item.status == ColonneStatus.f ? 'X' : '', style, alignment: pw.Alignment.center),
             _buildCompactCell(item.status == ColonneStatus.neo ? 'X' : '', style, alignment: pw.Alignment.center),
-            _buildCompactCell(item.numeroObservation, style, alignment: pw.Alignment.center),
+            _buildCompactCell(observationNumbers[item]?.toString() ?? '', style, alignment: pw.Alignment.center),
           ],
         );
       }),

@@ -1,12 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- Permissions pour l'écriture dans le stockage externe (Downloads) -->
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
-        android:maxSdkVersion="29" />
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
-        android:maxSdkVersion="32" />
     
     <application
-        android:label="formulaire_app"
+        android:label="Access VGP"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

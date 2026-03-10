@@ -13,11 +13,28 @@ class ChecklistScreen extends StatefulWidget {
 
 class _ChecklistScreenState extends State<ChecklistScreen> {
   late List<ChecklistItem> _currentChecklist;
+  // Map persistante pour les TextEditingControllers des observations
+  final Map<int, TextEditingController> _observationControllers = {};
 
   @override
   void initState() {
     super.initState();
     _currentChecklist = widget.rapport.checklist;
+    // Initialiser les controllers pour chaque item non-catégorie
+    for (int i = 0; i < _currentChecklist.length; i++) {
+      final item = _currentChecklist[i];
+      if (!item.isCategory && item.type != ChecklistType.ouiNon) {
+        _observationControllers[i] = TextEditingController(text: item.numeroObservation);
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    for (var controller in _observationControllers.values) {
+      controller.dispose();
+    }
+    super.dispose();
   }
 
   void _goToNextScreen() {
@@ -68,7 +85,7 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
                   style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic),
                 ),
                 const Text(
-                  'N° = n° d\'observation à reporter sur la couverture',
+                  'Obs = Observation à reporter dans les remarques du rapport final',
                   style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic),
                 ),
               ],
@@ -122,7 +139,7 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
             ),
             const SizedBox(height: 12),
             
-            if (item.type == ChecklistType.ouiNon)
+            if (item.type == ChecklistType.ouiNon || item.type == ChecklistType.ouiNonAvecObservation)
               // Rangée de boutons pour OUI / NON
               Wrap(
                 spacing: 8,
@@ -146,25 +163,23 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
                 ],
               ),
             
-            // Champ pour le numéro d'observation (uniquement pour les items standard)
+            // Champ pour l'observation (texte descriptif)
             if (item.type != ChecklistType.ouiNon) ...[
               const SizedBox(height: 8),
               Row(
                 children: [
-                  const Text('N° : ', style: TextStyle(fontWeight: FontWeight.bold)),
+                  const Text('Obs : ', style: TextStyle(fontWeight: FontWeight.bold)),
                   Expanded(
                     child: TextField(
                       decoration: const InputDecoration(
-                        hintText: 'N° observation',
+                        hintText: 'Décrire l\'observation',
                         isDense: true,
                         border: OutlineInputBorder(),
                       ),
                       onChanged: (value) {
-                        setState(() {
-                          item.numeroObservation = value;
-                        });
+                        item.numeroObservation = value;
                       },
-                      controller: TextEditingController(text: item.numeroObservation),
+                      controller: _observationControllers[index],
                     ),
                   ),
                 ],

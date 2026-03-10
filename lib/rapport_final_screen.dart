@@ -201,8 +201,13 @@ class _RapportFinalScreenState extends State<RapportFinalScreen> {
             ),
             const SizedBox(height: 20),
 
-            // --- Section Défauts ---
-            const Text('DÉFAUTS À REMÉDIER', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            // --- Section Remarques supplémentaires ---
+            const Text('REMARQUES SUPPLÉMENTAIRES', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 5),
+            const Text(
+              'Les observations saisies dans la checklist seront automatiquement reportées dans le rapport final. Ajoutez ici des remarques complémentaires si nécessaire.',
+              style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic, color: Colors.grey),
+            ),
             const SizedBox(height: 10),
             ...List.generate(8, (index) {
               return Padding(
@@ -210,7 +215,7 @@ class _RapportFinalScreenState extends State<RapportFinalScreen> {
                 child: TextField(
                   controller: _defautControllers[index],
                   decoration: InputDecoration(
-                    labelText: 'N° ${index + 1}',
+                    labelText: 'Remarque ${index + 1}',
                     border: const OutlineInputBorder(),
                   ),
                 ),
