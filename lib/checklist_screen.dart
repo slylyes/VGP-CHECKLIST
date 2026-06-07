@@ -20,6 +20,22 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
   void initState() {
     super.initState();
     _currentChecklist = widget.rapport.checklist;
+    // Migration rétrocompatible: convertir l'ancien status unique en set multi-statuts
+    for (final item in _currentChecklist) {
+      if (!item.isCategory && item.type == ChecklistType.standard) {
+        if (item.selectedStatuses.isEmpty &&
+            {
+              ColonneStatus.b,
+              ColonneStatus.d,
+              ColonneStatus.v,
+              ColonneStatus.f,
+              ColonneStatus.neo,
+            }.contains(item.status)) {
+          item.selectedStatuses.add(item.status);
+          item.status = ColonneStatus.nonCoche;
+        }
+      }
+    }
     // Initialiser les controllers pour chaque item non-catégorie
     for (int i = 0; i < _currentChecklist.length; i++) {
       final item = _currentChecklist[i];
@@ -192,17 +208,44 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
   }
 
   Widget _buildStatusChip(String label, ColonneStatus status, ChecklistItem item) {
-    final isSelected = item.status == status;
-    return ChoiceChip(
+    // OUI/NON reste en sélection exclusive
+    if (item.type == ChecklistType.ouiNon || item.type == ChecklistType.ouiNonAvecObservation) {
+      final isSelected = item.status == status;
+      return ChoiceChip(
+        label: Text(label),
+        selected: isSelected,
+        onSelected: (selected) {
+          setState(() {
+            item.status = selected ? status : ColonneStatus.nonCoche;
+          });
+        },
+        selectedColor: Colors.blue,
+        backgroundColor: Colors.grey[200],
+        labelStyle: TextStyle(
+          color: isSelected ? Colors.white : Colors.black87,
+          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+        ),
+      );
+    }
+
+    // B/D/V/F/NEO en multi-sélection
+    final isSelected = item.isChecked(status);
+    return FilterChip(
       label: Text(label),
       selected: isSelected,
       onSelected: (selected) {
         setState(() {
-          item.status = selected ? status : ColonneStatus.nonCoche;
+          if (selected) {
+            item.selectedStatuses.add(status);
+          } else {
+            item.selectedStatuses.remove(status);
+          }
+          item.status = ColonneStatus.nonCoche;
         });
       },
       selectedColor: Colors.blue,
       backgroundColor: Colors.grey[200],
+      checkmarkColor: Colors.white,
       labelStyle: TextStyle(
         color: isSelected ? Colors.white : Colors.black87,
         fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,

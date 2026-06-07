@@ -45,6 +45,7 @@ class ChecklistItem {
   final String titre;
   final bool isCategory; // Pour différencier les catégories des items
   ColonneStatus status;
+  Set<ColonneStatus> selectedStatuses; // Pour B/D/V/F/NEO en multi-sélection
   String numeroObservation; // N° d'observation
   final ChecklistType type; // Type de réponse attendue
 
@@ -52,9 +53,14 @@ class ChecklistItem {
     required this.titre,
     this.isCategory = false,
     this.status = ColonneStatus.nonCoche,
+    Set<ColonneStatus>? selectedStatuses,
     this.numeroObservation = '',
     this.type = ChecklistType.standard,
-  });
+  }) : selectedStatuses = selectedStatuses ?? <ColonneStatus>{};
+
+  bool isChecked(ColonneStatus checkedStatus) {
+    return selectedStatuses.contains(checkedStatus) || status == checkedStatus;
+  }
 }
 
 // Types de vérification (pour l'écran 3)

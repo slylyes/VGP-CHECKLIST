@@ -31,6 +31,13 @@ class _RapportFinalScreenState extends State<RapportFinalScreen> {
     }
   }
 
+  void _persistRemarques() {
+    widget.rapport.defauts = _defautControllers
+        .map((c) => c.text)
+        .where((text) => text.isNotEmpty)
+        .toList();
+  }
+
   // Génère le PDF initial
   Future<void> _generatePdfInitial() async {
     setState(() {
@@ -78,11 +85,8 @@ class _RapportFinalScreenState extends State<RapportFinalScreen> {
     });
 
     try {
-      // Sauvegarder les défauts
-      widget.rapport.defauts = _defautControllers
-          .map((c) => c.text)
-          .where((text) => text.isNotEmpty)
-          .toList();
+      // Sauvegarder les remarques
+      _persistRemarques();
 
       final pdfPath = await generateRapportFinal(widget.rapport);
       
@@ -399,6 +403,7 @@ class _RapportFinalScreenState extends State<RapportFinalScreen> {
 
   @override
   void dispose() {
+    _persistRemarques();
     for (var controller in _defautControllers) {
       controller.dispose();
     }

@@ -46,18 +46,7 @@ class _VerificationDetailsScreenState extends State<VerificationDetailsScreen> {
 
   void _goToFinalScreen() {
     if (_formKey.currentState!.validate()) {
-      // Sauvegarder les informations supplémentaires
-      widget.rapport.numeroSerie = _numeroSerieController.text;
-      widget.rapport.typeVehicule = _typeVehiculeController.text;
-      widget.rapport.categorieVehicule = _categorieController.text;
-      widget.rapport.accessoires = _accessoiresController.text;
-      widget.rapport.chargeMaxiLevage = _chargeMaxiController.text;
-      widget.rapport.anneeFabrication = _anneeFabricationController.text;
-      widget.rapport.marquageCE = _marquageCEController.text;
-      widget.rapport.compteurHorametre = _compteurHorametreController.text;
-      widget.rapport.numeroParc = _numeroParcController.text;
-      widget.rapport.nomResponsable = _nomResponsableController.text;
-      widget.rapport.societeResponsable = _societeResponsableController.text;
+      _saveToRapport();
 
       Navigator.push(
         context,
@@ -66,6 +55,20 @@ class _VerificationDetailsScreenState extends State<VerificationDetailsScreen> {
         ),
       );
     }
+  }
+
+  void _saveToRapport() {
+    widget.rapport.numeroSerie = _numeroSerieController.text;
+    widget.rapport.typeVehicule = _typeVehiculeController.text;
+    widget.rapport.categorieVehicule = _categorieController.text;
+    widget.rapport.accessoires = _accessoiresController.text;
+    widget.rapport.chargeMaxiLevage = _chargeMaxiController.text;
+    widget.rapport.anneeFabrication = _anneeFabricationController.text;
+    widget.rapport.marquageCE = _marquageCEController.text;
+    widget.rapport.compteurHorametre = _compteurHorametreController.text;
+    widget.rapport.numeroParc = _numeroParcController.text;
+    widget.rapport.nomResponsable = _nomResponsableController.text;
+    widget.rapport.societeResponsable = _societeResponsableController.text;
   }
 
   @override
@@ -216,6 +219,7 @@ class _VerificationDetailsScreenState extends State<VerificationDetailsScreen> {
 
   @override
   void dispose() {
+    _saveToRapport();
     _numeroSerieController.dispose();
     _typeVehiculeController.dispose();
     _categorieController.dispose();
