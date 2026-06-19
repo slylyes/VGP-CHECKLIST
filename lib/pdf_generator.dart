@@ -238,6 +238,7 @@ Future<String> generateRapportFinal(RapportVerification rapport) async {
   final finalNomResponsableUpper = (rapport.nomResponsable ?? '').toUpperCase();
   final finalSocieteResponsableUpper = (rapport.societeResponsable ?? '').toUpperCase();
   final finalMarqueModeleUpper = rapport.marqueModele.toUpperCase();
+  final finalMarqueHayonUpper = (rapport.marqueHayon ?? '').toUpperCase(); // <-- NOUVELLE LIGNE
   final finalTypeVehiculeUpper = (rapport.typeVehicule ?? '').toUpperCase();
   final finalCategorieUpper = (rapport.categorieVehicule ?? '').toUpperCase();
   final finalNumeroSerieUpper = (rapport.numeroSerie ?? '').toUpperCase();
@@ -409,6 +410,7 @@ Future<String> generateRapportFinal(RapportVerification rapport) async {
                       pw.Text('IDENTIFICATION', style: sectionStyle),
                       pw.Divider(color: primaryColor, height: 2),
                       _buildInfoRowFinal('Marque et Modèle :', finalMarqueModeleUpper, boldStyle, customStyle),
+                      _buildInfoRowFinal('Marque du Hayon :', finalMarqueHayonUpper, boldStyle, customStyle), 
                       _buildInfoRowFinal('Type :', finalTypeVehiculeUpper, boldStyle, customStyle),
                       _buildInfoRowFinal('Catégorie :', finalCategorieUpper, boldStyle, customStyle),
                       _buildInfoRowFinal('N° Série :', finalNumeroSerieUpper, boldStyle, customStyle),

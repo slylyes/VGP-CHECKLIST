@@ -127,7 +127,7 @@ class _RapportFinalScreenState extends State<RapportFinalScreen> {
       await Share.shareXFiles(
         [XFile(path)],
         subject: 'Rapport $type - ${widget.rapport.immatriculation}',
-        text: 'Rapport de vérification pour ${widget.rapport.nomClient}',
+        text: 'Bonjour,\n\nCi-joint les rapports de vérification initial et final pour le véhicule immatriculé ${widget.rapport.immatriculation}.\n\nCordialement',
       );
     } catch (e) {
       if (mounted) {

@@ -102,6 +102,7 @@ class RapportVerification {
   // Informations supplémentaires pour le rapport final
   String? numeroSerie;
   String? typeVehicule;
+  String? marqueHayon; 
   String? categorieVehicule;
   String? accessoires;
   String? chargeMaxiLevage;
@@ -129,6 +130,7 @@ class RapportVerification {
     String? commentaireGeneral,
     Set<TypeVerification>? typesVerification,
     List<DocumentObligatoire>? documentsObligatoires,
+    this.marqueHayon, 
     this.numeroSerie,
     this.typeVehicule,
     this.categorieVehicule,
