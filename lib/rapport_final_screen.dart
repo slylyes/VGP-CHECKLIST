@@ -31,6 +31,13 @@ class _RapportFinalScreenState extends State<RapportFinalScreen> {
     }
   }
 
+  void _persistRemarques() {
+    widget.rapport.defauts = _defautControllers
+        .map((c) => c.text)
+        .where((text) => text.isNotEmpty)
+        .toList();
+  }
+
   // Génère le PDF initial
   Future<void> _generatePdfInitial() async {
     setState(() {
@@ -78,11 +85,8 @@ class _RapportFinalScreenState extends State<RapportFinalScreen> {
     });
 
     try {
-      // Sauvegarder les défauts
-      widget.rapport.defauts = _defautControllers
-          .map((c) => c.text)
-          .where((text) => text.isNotEmpty)
-          .toList();
+      // Sauvegarder les remarques
+      _persistRemarques();
 
       final pdfPath = await generateRapportFinal(widget.rapport);
       
@@ -123,7 +127,7 @@ class _RapportFinalScreenState extends State<RapportFinalScreen> {
       await Share.shareXFiles(
         [XFile(path)],
         subject: 'Rapport $type - ${widget.rapport.immatriculation}',
-        text: 'Rapport de vérification pour ${widget.rapport.nomClient}',
+        text: 'Bonjour,\n\nCi-joint les rapports de vérification initial et final pour le véhicule immatriculé ${widget.rapport.immatriculation}.\n\nCordialement',
       );
     } catch (e) {
       if (mounted) {
@@ -201,8 +205,13 @@ class _RapportFinalScreenState extends State<RapportFinalScreen> {
             ),
             const SizedBox(height: 20),
 
-            // --- Section Défauts ---
-            const Text('DÉFAUTS À REMÉDIER', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            // --- Section Remarques supplémentaires ---
+            const Text('REMARQUES SUPPLÉMENTAIRES', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 5),
+            const Text(
+              'Les observations saisies dans la checklist seront automatiquement reportées dans le rapport final. Ajoutez ici des remarques complémentaires si nécessaire.',
+              style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic, color: Colors.grey),
+            ),
             const SizedBox(height: 10),
             ...List.generate(8, (index) {
               return Padding(
@@ -210,7 +219,7 @@ class _RapportFinalScreenState extends State<RapportFinalScreen> {
                 child: TextField(
                   controller: _defautControllers[index],
                   decoration: InputDecoration(
-                    labelText: 'N° ${index + 1}',
+                    labelText: 'Remarque ${index + 1}',
                     border: const OutlineInputBorder(),
                   ),
                 ),
@@ -394,6 +403,7 @@ class _RapportFinalScreenState extends State<RapportFinalScreen> {
 
   @override
   void dispose() {
+    _persistRemarques();
     for (var controller in _defautControllers) {
       controller.dispose();
     }

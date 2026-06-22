@@ -13,11 +13,44 @@ class ChecklistScreen extends StatefulWidget {
 
 class _ChecklistScreenState extends State<ChecklistScreen> {
   late List<ChecklistItem> _currentChecklist;
+  // Map persistante pour les TextEditingControllers des observations
+  final Map<int, TextEditingController> _observationControllers = {};
 
   @override
   void initState() {
     super.initState();
     _currentChecklist = widget.rapport.checklist;
+    // Migration rétrocompatible: convertir l'ancien status unique en set multi-statuts
+    for (final item in _currentChecklist) {
+      if (!item.isCategory && item.type == ChecklistType.standard) {
+        if (item.selectedStatuses.isEmpty &&
+            {
+              ColonneStatus.b,
+              ColonneStatus.d,
+              ColonneStatus.v,
+              ColonneStatus.f,
+              ColonneStatus.neo,
+            }.contains(item.status)) {
+          item.selectedStatuses.add(item.status);
+          item.status = ColonneStatus.nonCoche;
+        }
+      }
+    }
+    // Initialiser les controllers pour chaque item non-catégorie
+    for (int i = 0; i < _currentChecklist.length; i++) {
+      final item = _currentChecklist[i];
+      if (!item.isCategory && item.type != ChecklistType.ouiNon) {
+        _observationControllers[i] = TextEditingController(text: item.numeroObservation);
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    for (var controller in _observationControllers.values) {
+      controller.dispose();
+    }
+    super.dispose();
   }
 
   void _goToNextScreen() {
@@ -60,11 +93,15 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
                 ),
                 const SizedBox(height: 8),
                 const Text(
+                  'Pour Conditions Préalables : OUI / NON',
+                  style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic),
+                ),
+                const Text(
                   'B = Bon état | D = Défaut | V = Visuel | F = Fonctionnel | NEO = Non équipé d\'origine',
                   style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic),
                 ),
                 const Text(
-                  'N° = n° d\'observation à reporter sur la couverture',
+                  'Obs = Observation à reporter dans les remarques du rapport final',
                   style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic),
                 ),
               ],
@@ -118,42 +155,52 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
             ),
             const SizedBox(height: 12),
             
-            // Rangée de boutons pour B, D, V, F, NEO
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                _buildStatusChip('B', ColonneStatus.b, item),
-                _buildStatusChip('D', ColonneStatus.d, item),
-                _buildStatusChip('V', ColonneStatus.v, item),
-                _buildStatusChip('F', ColonneStatus.f, item),
-                _buildStatusChip('NEO', ColonneStatus.neo, item),
-              ],
-            ),
+            if (item.type == ChecklistType.ouiNon || item.type == ChecklistType.ouiNonAvecObservation)
+              // Rangée de boutons pour OUI / NON
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  _buildStatusChip('OUI', ColonneStatus.oui, item),
+                  _buildStatusChip('NON', ColonneStatus.non, item),
+                ],
+              )
+            else
+              // Rangée de boutons pour B, D, V, F, NEO
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  _buildStatusChip('B', ColonneStatus.b, item),
+                  _buildStatusChip('D', ColonneStatus.d, item),
+                  _buildStatusChip('V', ColonneStatus.v, item),
+                  _buildStatusChip('F', ColonneStatus.f, item),
+                  _buildStatusChip('NEO', ColonneStatus.neo, item),
+                ],
+              ),
             
-            const SizedBox(height: 8),
-            
-            // Champ pour le numéro d'observation
-            Row(
-              children: [
-                const Text('N° : ', style: TextStyle(fontWeight: FontWeight.bold)),
-                Expanded(
-                  child: TextField(
-                    decoration: const InputDecoration(
-                      hintText: 'N° observation',
-                      isDense: true,
-                      border: OutlineInputBorder(),
-                    ),
-                    onChanged: (value) {
-                      setState(() {
+            // Champ pour l'observation (texte descriptif)
+            if (item.type != ChecklistType.ouiNon) ...[
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  const Text('Obs : ', style: TextStyle(fontWeight: FontWeight.bold)),
+                  Expanded(
+                    child: TextField(
+                      decoration: const InputDecoration(
+                        hintText: 'Décrire l\'observation',
+                        isDense: true,
+                        border: OutlineInputBorder(),
+                      ),
+                      onChanged: (value) {
                         item.numeroObservation = value;
-                      });
-                    },
-                    controller: TextEditingController(text: item.numeroObservation),
+                      },
+                      controller: _observationControllers[index],
+                    ),
                   ),
-                ),
-              ],
-            ),
+                ],
+              ),
+            ],
           ],
         ),
       ),
@@ -161,17 +208,44 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
   }
 
   Widget _buildStatusChip(String label, ColonneStatus status, ChecklistItem item) {
-    final isSelected = item.status == status;
-    return ChoiceChip(
+    // OUI/NON reste en sélection exclusive
+    if (item.type == ChecklistType.ouiNon || item.type == ChecklistType.ouiNonAvecObservation) {
+      final isSelected = item.status == status;
+      return ChoiceChip(
+        label: Text(label),
+        selected: isSelected,
+        onSelected: (selected) {
+          setState(() {
+            item.status = selected ? status : ColonneStatus.nonCoche;
+          });
+        },
+        selectedColor: Colors.blue,
+        backgroundColor: Colors.grey[200],
+        labelStyle: TextStyle(
+          color: isSelected ? Colors.white : Colors.black87,
+          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+        ),
+      );
+    }
+
+    // B/D/V/F/NEO en multi-sélection
+    final isSelected = item.isChecked(status);
+    return FilterChip(
       label: Text(label),
       selected: isSelected,
       onSelected: (selected) {
         setState(() {
-          item.status = selected ? status : ColonneStatus.nonCoche;
+          if (selected) {
+            item.selectedStatuses.add(status);
+          } else {
+            item.selectedStatuses.remove(status);
+          }
+          item.status = ColonneStatus.nonCoche;
         });
       },
       selectedColor: Colors.blue,
       backgroundColor: Colors.grey[200],
+      checkmarkColor: Colors.white,
       labelStyle: TextStyle(
         color: isSelected ? Colors.white : Colors.black87,
         fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,

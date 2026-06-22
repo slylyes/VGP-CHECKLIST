@@ -16,6 +16,7 @@ class _VerificationDetailsScreenState extends State<VerificationDetailsScreen> {
   
   // Contrôleurs pour les champs supplémentaires
   final TextEditingController _numeroSerieController = TextEditingController();
+  final TextEditingController _marqueHayonController = TextEditingController();
   final TextEditingController _typeVehiculeController = TextEditingController();
   final TextEditingController _categorieController = TextEditingController();
   final TextEditingController _accessoiresController = TextEditingController();
@@ -33,6 +34,7 @@ class _VerificationDetailsScreenState extends State<VerificationDetailsScreen> {
     // Initialiser avec les valeurs existantes si disponibles
     _numeroSerieController.text = widget.rapport.numeroSerie ?? '';
     _typeVehiculeController.text = widget.rapport.typeVehicule ?? '';
+    _marqueHayonController.text = widget.rapport.marqueHayon ?? '';
     _categorieController.text = widget.rapport.categorieVehicule ?? '';
     _accessoiresController.text = widget.rapport.accessoires ?? '';
     _chargeMaxiController.text = widget.rapport.chargeMaxiLevage ?? '';
@@ -46,18 +48,7 @@ class _VerificationDetailsScreenState extends State<VerificationDetailsScreen> {
 
   void _goToFinalScreen() {
     if (_formKey.currentState!.validate()) {
-      // Sauvegarder les informations supplémentaires
-      widget.rapport.numeroSerie = _numeroSerieController.text;
-      widget.rapport.typeVehicule = _typeVehiculeController.text;
-      widget.rapport.categorieVehicule = _categorieController.text;
-      widget.rapport.accessoires = _accessoiresController.text;
-      widget.rapport.chargeMaxiLevage = _chargeMaxiController.text;
-      widget.rapport.anneeFabrication = _anneeFabricationController.text;
-      widget.rapport.marquageCE = _marquageCEController.text;
-      widget.rapport.compteurHorametre = _compteurHorametreController.text;
-      widget.rapport.numeroParc = _numeroParcController.text;
-      widget.rapport.nomResponsable = _nomResponsableController.text;
-      widget.rapport.societeResponsable = _societeResponsableController.text;
+      _saveToRapport();
 
       Navigator.push(
         context,
@@ -66,6 +57,21 @@ class _VerificationDetailsScreenState extends State<VerificationDetailsScreen> {
         ),
       );
     }
+  }
+
+  void _saveToRapport() {
+    widget.rapport.numeroSerie = _numeroSerieController.text;
+    widget.rapport.marqueHayon = _marqueHayonController.text;
+    widget.rapport.typeVehicule = _typeVehiculeController.text;
+    widget.rapport.categorieVehicule = _categorieController.text;
+    widget.rapport.accessoires = _accessoiresController.text;
+    widget.rapport.chargeMaxiLevage = _chargeMaxiController.text;
+    widget.rapport.anneeFabrication = _anneeFabricationController.text;
+    widget.rapport.marquageCE = _marquageCEController.text;
+    widget.rapport.compteurHorametre = _compteurHorametreController.text;
+    widget.rapport.numeroParc = _numeroParcController.text;
+    widget.rapport.nomResponsable = _nomResponsableController.text;
+    widget.rapport.societeResponsable = _societeResponsableController.text;
   }
 
   @override
@@ -163,6 +169,7 @@ class _VerificationDetailsScreenState extends State<VerificationDetailsScreen> {
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 10),
+              _buildTextField(_marqueHayonController, 'Marque du Hayon'), 
               _buildTextField(_numeroSerieController, 'N° de Série'),
               _buildTextField(_typeVehiculeController, 'Type'),
               _buildTextField(_categorieController, 'Catégorie'),
@@ -216,7 +223,9 @@ class _VerificationDetailsScreenState extends State<VerificationDetailsScreen> {
 
   @override
   void dispose() {
+    _saveToRapport();
     _numeroSerieController.dispose();
+    _marqueHayonController.dispose();
     _typeVehiculeController.dispose();
     _categorieController.dispose();
     _accessoiresController.dispose();
